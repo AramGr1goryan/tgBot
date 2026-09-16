@@ -509,7 +509,7 @@ def get_mapping(filename):
     try:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         file_path = os.path.join(base_dir, filename)
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, 'r', encoding='utf-8-sig') as f:
             data = json.load(f)
             return {item['id']: item['name'] for item in data}
     except Exception as e:
