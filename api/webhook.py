@@ -440,10 +440,11 @@ async def fetch_probation_details():
     async with httpx.AsyncClient() as client:
         results = await asyncio.gather(
             _fetch_status(client, headers, date_from, date_to, 1),
-            _fetch_status(client, headers, date_from, date_to, 2)
+            _fetch_status(client, headers, date_from, date_to, 2),
+            _fetch_status(client, headers, date_from, date_to, 3)
         )
         
-    all_items = results[0] + results[1]
+    all_items = results[0] + results[1] + results[2]
     
     target_lessons = []
     customer_ids = set()
