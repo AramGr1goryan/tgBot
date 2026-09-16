@@ -8,6 +8,8 @@ import os
 import re
 from io import BytesIO
 from bs4 import BeautifulSoup
+from datetime import datetime
+import zoneinfo
 
 API_TOKEN = os.getenv("BOT_TOKEN")
 POSTGRES_URL = os.getenv("POSTGRES_URL")
@@ -30,6 +32,16 @@ db_initialized = False
 BANNED_USERS = set()
 EXECUTORS = {}
 KNOWN_USERS = set()
+
+PROB_SCHEDULE = {
+    0: ("Երկուշաբթի", "• 15:00 — Lego (6 աշակերտ) կամ Makeblock (3 աշակերտ)\n• 17:00 — Lego (2 աշակերտ)\n• 18:30 — Lego (3 աշակերտ)"),
+    1: ("Երեքշաբթի", "• 15:00 — Lego (6 աշակերտ) կամ Makeblock (3 աշակերտ)\n• 16:00 — Lego (6 աշակերտ) կամ Makeblock (3 աշակերտ)\n• 18:00 — Lego (1 աշակերտ)"),
+    2: ("Չորեքշաբթի", "• 15:00 — Lego կամ Makeblock (1 աշակերտ)\n• 17:30 — Lego (3 աշակերտ)\n• 18:30 — Lego (3 աշակերտ)"),
+    3: ("Հինգշաբթի", "• 14:00 — Lego (5 աշակերտ, ռուսերեն)\n• 15:00 — Lego կամ Makeblock (3 աշակերտ)\n• 17:00 — Lego (3 աշակերտ)"),
+    4: ("Ուրբաթ", "• 13:00 - 16:00 — Lego (6 աշակերտ) և Makeblock (3 աշակերտ)\n• 18:30 — Lego (6 աշակերտ) և Makeblock (3 աշակերտ)"),
+    5: ("Շաբաթ", "• 17:30 — Lego (6 աշակերտ)\n• 17:30 — Makeblock (3 աշակերտ)"),
+    6: ("Կիրակի", "Այսօր փորձնական դասեր չկան։")
+}
 
 async def ensure_db():
     global db_initialized, BANNED_USERS
@@ -164,9 +176,37 @@ async def cmd_help(message: types.Message):
         "/addtask [տեքստ] - Ավելացնել առաջադրանք\n"
         "/checktasks - Տեսնել առաջադրանքները\n"
         "/task[համար] - Նշել որպես կատարված (օրինակ՝ /task1)\n\n"
+        "Փորձնական դասեր (G.N ՃԻՇՏ մասնաճյուղ)՝\n"
+        "/prob - Տեսնել այսօրվա հասանելի ժամերը\n"
+        "/proball - Տեսնել բոլոր օրերի հասանելի ժամերը\n\n"
         "Lego թեմաներ՝\n"
         "/lego [խումբ] - Ընտրել թեմա (օրինակ՝ /lego Spider man)"
     )
+
+@dp.message(Command("prob"))
+async def cmd_prob(message: types.Message):
+    tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+    today_weekday = datetime.now(tz).weekday()
+    
+    day_name, schedule = PROB_SCHEDULE[today_weekday]
+    
+    text = (
+        "G.N (ՃԻՇՏ մասնաճյուղ)\n"
+        "——————————————————————————\n"
+        f"🔹 {day_name}\n"
+        f"{schedule}\n"
+        "——————————————————————————"
+    )
+    await message.answer(text)
+
+@dp.message(Command("proball"))
+async def cmd_proball(message: types.Message):
+    text = "G.N (ՃԻՇՏ մասնաճյուղ)\n——————————————————————————\n"
+    for i in range(6): # Пн-Сб
+        day_name, schedule = PROB_SCHEDULE[i]
+        text += f"🔹 {day_name}\n{schedule}\n——————————————————————————\n"
+        
+    await message.answer(text)
 
 @dp.message(Command("addtask"))
 async def cmd_addtask(message: types.Message):
