@@ -33,24 +33,24 @@ async def process_payment(message: types.Message):
         
     text = message.text.strip()
     if text.startswith('/start'):
-        await message.answer("Привет! Отправь мне сообщение в формате:\nName Surname Payment_sum Payment_Method")
+        await message.answer("Ողջույն: Ուղարկեք ինձ հաղորդագրություն հետևյալ ձևաչափով՝\nԱնուն Ազգանուն Գումար Վճարման_Եղանակ")
         return
 
     if text.startswith('/help'):
         await message.answer(
-            "Как правильно писать сообщения:\n\n"
-            "Формат: Имя Фамилия Сумма Метод\n\n"
-            "Пример: Aram Grigoryan 50000 N\n\n"
-            "Доступные методы оплаты:\n"
-            "N — Наличной\n"
-            "b.n — На терминал\n"
-            "c — На карту"
+            "Ինչպես ճիշտ գրել հաղորդագրությունները՝\n\n"
+            "Ձևաչափ՝ Անուն Ազգանուն Գումար Եղանակ\n\n"
+            "Օրինակ՝ Aram Grigoryan 50000 N\n\n"
+            "Հասանելի վճարման եղանակներ՝\n"
+            "N — Կանխիկ\n"
+            "b.n — Տերմինալով\n"
+            "c — Քարտով"
         )
         return
 
     parts = text.split()
     if len(parts) < 4:
-        await message.answer("Неверный формат.\nПожалуйста, используйте формат: Name Surname Payment_sum Payment_Method")
+        await message.answer("Սխալ ձևաչափ:\nԽնդրում ենք օգտագործել հետևյալ ձևաչափը՝ Անուն Ազգանուն Գումար Վճարման_Եղանակ")
         return
 
     payment_method_raw = parts[-1].lower()
