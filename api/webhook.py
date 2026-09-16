@@ -270,7 +270,7 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
     else:
         income_item_id = 1 # Курсы
         
-    today = datetime.now().strftime("%d.%m.%Y")
+    today = datetime.now(zoneinfo.ZoneInfo('Asia/Yerevan')).strftime("%d.%m.%Y")
     
     payload = {
         "customer_id": customer_id,
