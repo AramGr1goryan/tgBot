@@ -99,6 +99,10 @@ async def get_alfacrm_token():
             "https://robixlab.s20.online/v2api/auth/login",
             json={"email": ALFACRM_EMAIL, "api_key": ALFACRM_API_KEY}
         )
+        if resp.status_code != 200:
+            print(f"ALFACRM AUTH ERROR: {resp.status_code} {resp.text}")
+            return None
+            
         data = resp.json()
         _alfacrm_token = data.get("token")
         _alfacrm_token_expires = now + 7200 # 2 hours
@@ -106,6 +110,9 @@ async def get_alfacrm_token():
 
 async def fetch_probation_lessons():
     token = await get_alfacrm_token()
+    if not token:
+        return None
+        
     tz = zoneinfo.ZoneInfo("Asia/Yerevan")
     now = datetime.now(tz)
     
@@ -347,6 +354,10 @@ async def cmd_getweek(message: types.Message):
     await message.answer("🔄 Կապ եմ հաստատում Alfa CRM-ի հետ...")
     booked_slots = await fetch_probation_lessons()
     
+    if booked_slots is None:
+        await message.answer("❌ Սխալ՝ չհաջողվեց կապ հաստատել Alfa CRM-ի հետ: Ստուգեք API բանալիները (ALFACRM_API_KEY) և համոզվեք, որ CRM-ում անջատված են IP սահմանափակումները:")
+        return
+        
     if not booked_slots:
         await message.answer("Այս շաբաթվա համար գրանցված փորձնական դասեր չկան:")
         return
@@ -382,6 +393,10 @@ async def cmd_freeprob(message: types.Message):
     await message.answer("🔄 Հաշվարկում եմ ազատ տեղերը...")
     booked_slots = await fetch_probation_lessons()
     
+    if booked_slots is None:
+        await message.answer("❌ Սխալ՝ չհաջողվեց կապ հաստատել Alfa CRM-ի հետ: Ստուգեք API բանալիները (ALFACRM_API_KEY) և համոզվեք, որ CRM-ում անջատված են IP սահմանափակումները:")
+        return
+        
     booked = {}
     for slot in booked_slots:
         w = slot["weekday"]
