@@ -1,10 +1,13 @@
 from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
+from aiogram.types import ForceReply
 from transliterate import translit
 import asyncpg
 import os
 import re
+from io import BytesIO
+from bs4 import BeautifulSoup
 
 API_TOKEN = os.getenv("BOT_TOKEN")
 POSTGRES_URL = os.getenv("POSTGRES_URL")
@@ -32,6 +35,11 @@ async def ensure_db():
     conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     await conn.execute('''CREATE TABLE IF NOT EXISTS tasks
                  (id SERIAL PRIMARY KEY, description TEXT)''')
+    # Таблицы для Lego
+    await conn.execute('''CREATE TABLE IF NOT EXISTS lego_groups
+                 (id SERIAL PRIMARY KEY, name TEXT UNIQUE)''')
+    await conn.execute('''CREATE TABLE IF NOT EXISTS lego_themes
+                 (id SERIAL PRIMARY KEY, group_id INTEGER REFERENCES lego_groups(id) ON DELETE CASCADE, name TEXT)''')
     await conn.close()
     db_initialized = True
 
@@ -144,6 +152,131 @@ async def cmd_complete_task(message: types.Message):
     else:
         await message.answer("Առաջադրանքը չի գտնվել:")
 
+# Загрузка HTML файла с темами Lego
+@dp.message(F.document)
+async def process_html_upload(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    if not message.document.file_name.endswith('.html'):
+        return
+        
+    await message.answer("Загружаю и обрабатываю HTML файл Lego...")
+    file = await bot.get_file(message.document.file_id)
+    file_bytes = BytesIO()
+    await bot.download_file(file.file_path, file_bytes)
+    html_content = file_bytes.getvalue().decode('utf-8')
+    
+    soup = BeautifulSoup(html_content, 'html.parser')
+    rows = soup.select('table tbody tr')
+    
+    await ensure_db()
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+    
+    groups_added = 0
+    themes_added = 0
+    
+    for row in rows:
+        tds = row.find_all('td')
+        if len(tds) < 2:
+            continue
+        group_name = tds[0].get_text(strip=True)
+        # Вставляем группу
+        group_id = await conn.fetchval(
+            "INSERT INTO lego_groups (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id", 
+            group_name
+        )
+        groups_added += 1
+        
+        # Удаляем старые темы этой группы, чтобы загрузить свежие
+        await conn.execute("DELETE FROM lego_themes WHERE group_id = $1", group_id)
+        
+        lis = tds[1].find_all('li')
+        for li in lis:
+            theme_name = li.get_text(strip=True)
+            await conn.execute(
+                "INSERT INTO lego_themes (group_id, name) VALUES ($1, $2)",
+                group_id, theme_name
+            )
+            themes_added += 1
+            
+    await conn.close()
+    await message.answer(f"База Lego успешно обновлена!\nОбработано групп: {groups_added}\nДобавлено тем: {themes_added}")
+
+@dp.message(Command("lego"))
+async def cmd_lego(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    
+    group_query = message.text.replace("/lego", "", 1).strip()
+    if not group_query:
+        await message.answer("Укажите имя группы, например: /lego Spider man")
+        return
+        
+    await ensure_db()
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+    
+    # Ищем группу 
+    groups = await conn.fetch("SELECT id, name FROM lego_groups WHERE name ILIKE $1 LIMIT 1", f"%{group_query}%")
+    if not groups:
+        await conn.close()
+        await message.answer(f"Группа '{group_query}' не найдена в базе.")
+        return
+        
+    group_id = groups[0]['id']
+    group_name = groups[0]['name']
+    
+    themes = await conn.fetch("SELECT name FROM lego_themes WHERE group_id = $1 ORDER BY name", group_id)
+    await conn.close()
+    
+    if not themes:
+        await message.answer(f"В группе '{group_name}' нет доступных тем (или они все пройдены).")
+        return
+        
+    themes_list = "\n".join([f"- {t['name']}" for t in themes])
+    prompt = f"Доступные темы для группы {group_name}:\n{themes_list}\n\nНапишите название темы, которую выбрали:"
+    
+    # Лимит Telegram - 4096 символов.
+    if len(prompt) > 4000:
+        prompt = prompt[:4000] + "...\n\nНапишите название темы, которую выбрали:"
+        
+    await message.answer(prompt, reply_markup=ForceReply(selective=True))
+
+def is_theme_reply(message: types.Message) -> bool:
+    if not message.reply_to_message or not message.reply_to_message.text:
+        return False
+    return "Доступные темы для группы" in message.reply_to_message.text
+
+@dp.message(is_theme_reply)
+async def process_theme_selection(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    original_text = message.reply_to_message.text
+    first_line = original_text.split('\n')[0]
+    group_name = first_line.replace("Доступные темы для группы ", "").replace(":", "").strip()
+    theme_choice = message.text.strip()
+    
+    await ensure_db()
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+    
+    group_id = await conn.fetchval("SELECT id FROM lego_groups WHERE name = $1", group_name)
+    if not group_id:
+        await conn.close()
+        await message.answer("Ошибка: группа не найдена в базе.")
+        return
+        
+    deleted_id = await conn.fetchval(
+        "DELETE FROM lego_themes WHERE group_id = $1 AND name ILIKE $2 RETURNING id",
+        group_id, f"%{theme_choice}%"
+    )
+    
+    await conn.close()
+    
+    if deleted_id:
+        await message.answer(f"✅ Тема '{theme_choice}' выбрана и удалена из группы '{group_name}'!")
+    else:
+        await message.answer(f"❌ Тема '{theme_choice}' не найдена в группе '{group_name}'. Убедитесь, что написали без ошибок.")
+
 @dp.message()
 async def process_payment(message: types.Message):
     if not message.text:
@@ -195,7 +328,6 @@ async def webhook(request: Request):
         
         import asyncio
         print("Starting dp.feed_update")
-        # Ограничиваем время выполнения 4 секундами, чтобы Vercel не убивал процесс молча на 5 секундах
         await asyncio.wait_for(dp.feed_update(bot, update), timeout=4.0)
         print("Finished dp.feed_update successfully")
     except asyncio.TimeoutError:
