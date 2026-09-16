@@ -36,6 +36,18 @@ async def process_payment(message: types.Message):
         await message.answer("Привет! Отправь мне сообщение в формате:\nName Surname Payment_sum Payment_Method")
         return
 
+    if text.startswith('/Օգնություն'):
+        await message.answer(
+            "Как правильно писать сообщения:\n\n"
+            "Формат: Имя Фамилия Сумма Метод\n\n"
+            "Пример: Aram Grigoryan 50000 N\n\n"
+            "Доступные методы оплаты:\n"
+            "N — Наличной\n"
+            "b.n — На терминал\n"
+            "c — На карту"
+        )
+        return
+
     parts = text.split()
     if len(parts) < 4:
         await message.answer("Неверный формат.\nПожалуйста, используйте формат: Name Surname Payment_sum Payment_Method")
