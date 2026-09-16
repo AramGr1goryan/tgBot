@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ForceReply, InlineKeyboardButton, InlineKeyboardMarkup
@@ -555,7 +555,7 @@ async def cmd_myschedule(message: types.Message):
             response = await client.post(
                 "https://robixlab.s20.online/v2api/1/lesson/index",
                 headers=headers,
-                json={"teacher_id": teacher_id, "date_from": date_from, "date_to": date_to},
+                json={"teacher_id": teacher_id, "date_from": date_from, "date_to": date_to, "status": 1},
                 timeout=10.0
             )
             if response.status_code == 200:
