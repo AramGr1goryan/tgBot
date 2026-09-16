@@ -27,25 +27,25 @@ async def ensure_db():
     global db_initialized
     if db_initialized or not POSTGRES_URL:
         return
-    conn = await asyncpg.connect(POSTGRES_URL)
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     await conn.execute('''CREATE TABLE IF NOT EXISTS tasks
                  (id SERIAL PRIMARY KEY, description TEXT)''')
     await conn.close()
     db_initialized = True
 
 async def add_task(description: str):
-    conn = await asyncpg.connect(POSTGRES_URL)
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     await conn.execute("INSERT INTO tasks (description) VALUES ($1)", description)
     await conn.close()
 
 async def get_tasks():
-    conn = await asyncpg.connect(POSTGRES_URL)
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     rows = await conn.fetch("SELECT id, description FROM tasks ORDER BY id")
     await conn.close()
     return rows
 
 async def delete_task(task_id: int):
-    conn = await asyncpg.connect(POSTGRES_URL)
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     row = await conn.fetchrow("SELECT description FROM tasks WHERE id = $1", task_id)
     if row:
         await conn.execute("DELETE FROM tasks WHERE id = $1", task_id)
