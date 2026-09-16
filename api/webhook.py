@@ -933,13 +933,31 @@ async def process_payment(message: types.Message):
         
     executor_name = EXECUTORS[message.from_user.id]
 
+    ERROR_INSTRUCTION = (
+        "❌ **Սխալ ձևաչափ**\n\n"
+        "Վճարումը գրանցելու համար խնդրում ենք գրել ճիշտ հերթականությամբ՝\n"
+        "👉 `Անուն Ազգանուն Գումար Եղանակ`\n\n"
+        "Օրինակ՝ `Aram Grigoryan 50000 N`\n\n"
+        "💳 **Հասանելի վճարման եղանակներ՝**\n"
+        "• `N` — Կանխիկ (Наличные)\n"
+        "• `b.n` — Տերմինալով (Безналичные)\n"
+        "• `c` — Քարտով փոխանցում (Карта)\n\n"
+        "⚠️ Ուշադրություն դարձրեք, որ գումարը պետք է լինի միայն թվերով, իսկ եղանակը՝ նշված տարբերակներից մեկը։"
+    )
+
     parts = text.split()
-    if len(parts) < 4:
-        await message.answer("Սխալ ձևաչափ:\nԽնդրում ենք օգտագործել հետևյալ ձևաչափը՝ Անուն Ազգանուն Գումար Վճարման_Եղանակ")
+    if len(parts) < 3:
+        await message.answer(ERROR_INSTRUCTION, parse_mode="Markdown")
         return
 
     payment_method_raw = parts[-1].lower()
     payment_sum = parts[-2]
+    clean_sum = payment_sum.replace('.', '').replace(',', '')
+    
+    if payment_method_raw not in PAYMENT_METHODS or not clean_sum.isdigit():
+        await message.answer(ERROR_INSTRUCTION, parse_mode="Markdown")
+        return
+
     name_english = " ".join(parts[:-2])
     
     name_russian = transliterate_name(name_english)
