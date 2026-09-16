@@ -525,9 +525,11 @@ TEACHERS_MAP = {
     1037044744: {"id": 12, "name": "Լիա Ավետիսյան"}
 }
 
-async def check_uncompleted_lessons(bot: Bot, exclude_ids=None):
+async def check_uncompleted_lessons(bot: Bot, exclude_ids=None, override_ids=None):
     if exclude_ids is None:
         exclude_ids = []
+    if override_ids is None:
+        override_ids = {}
         
     token = await get_alfacrm_token()
     if not token:
@@ -566,10 +568,11 @@ async def check_uncompleted_lessons(bot: Bot, exclude_ids=None):
                             f"Խնդրում ենք մուտք գործել CRM և նշել դասերը որպես անցկացված:"
                         )
                         try:
-                            await bot.send_message(tg_id, text, parse_mode="Markdown")
+                            target_tg_id = override_ids.get(tg_id, tg_id)
+                            await bot.send_message(target_tg_id, text, parse_mode="Markdown")
                             messages_sent += 1
                         except Exception as e:
-                            print(f"Failed to send to {tg_id}: {e}")
+                            print(f"Failed to send to {target_tg_id}: {e}")
             except Exception as e:
                 print(f"Error fetching lessons for teacher {teacher_id}: {e}")
                 
@@ -580,7 +583,7 @@ async def cmd_testteacher(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
     await message.answer("🔄 Սկսում եմ չնշված դասերի ստուգումը...")
-    result = await check_uncompleted_lessons(bot, exclude_ids=[1037044744])
+    result = await check_uncompleted_lessons(bot, exclude_ids=[1037044744], override_ids={1071411870: 8954540927})
     await message.answer(f"✅ Ստուգումն ավարտվեց:\nՈւղարկված նամակներ՝ {result.get('reminders_sent', 0)}")
 
 @dp.message(Command("myschedule"))
