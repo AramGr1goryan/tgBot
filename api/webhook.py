@@ -423,7 +423,158 @@ async def cmd_getweek(message: types.Message):
         
     await message.answer(text, parse_mode="Markdown")
 
-@dp.message(Command("freeprob"))
+async def fetch_probation_details():
+    token = await get_alfacrm_token()
+    if not token: return None
+    
+    tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+    now = datetime.now(tz)
+    monday = now - timedelta(days=now.weekday())
+    sunday = monday + timedelta(days=6)
+    
+    date_from = monday.strftime("%Y-%m-%d")
+    date_to = sunday.strftime("%Y-%m-%d")
+    
+    headers = {"X-ALFACRM-TOKEN": token, "Content-Type": "application/json"}
+    
+    async with httpx.AsyncClient() as client:
+        results = await asyncio.gather(
+            _fetch_status(client, headers, date_from, date_to, 1),
+            _fetch_status(client, headers, date_from, date_to, 2)
+        )
+        
+    all_items = results[0] + results[1]
+    
+    target_lessons = []
+    customer_ids = set()
+    
+    for item in all_items:
+        r_id = item.get("room_id")
+        s_id = item.get("subject_id")
+        t_id = item.get("lesson_type_id")
+        
+        if t_id not in [3, 9]:
+            continue
+            
+        subject = None
+        if s_id == 24 and r_id == 33:
+            subject = "Lego"
+        elif s_id == 23 and r_id == 34:
+            subject = "MakeBlock"
+            
+        if not subject:
+            continue
+            
+        details = item.get("details", [])
+        if not details:
+            continue
+            
+        date_str = item.get("date")
+        time_from = item.get("time_from")
+        dt = datetime.strptime(time_from, "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+        weekday = dt.weekday()
+        time_only = time_from.split(" ")[1][:5]
+        
+        if weekday == 4 and "13:00" <= time_only <= "16:00":
+            time_only = "13:00-16:00"
+            
+        cust_list = []
+        for det in details:
+            cid = det.get("customer_id")
+            if cid:
+                customer_ids.add(cid)
+                cust_list.append(cid)
+                
+        if cust_list:
+            target_lessons.append({
+                "weekday": weekday,
+                "time": time_only,
+                "subject": subject,
+                "customers": cust_list
+            })
+            
+    if not customer_ids:
+        return []
+        
+    customers_map = {}
+    async with httpx.AsyncClient() as client:
+        payload = {"id": list(customer_ids), "per-page": max(200, len(customer_ids))}
+        resp = await client.post(
+            "https://robixlab.s20.online/v2api/1/customer/index",
+            headers=headers,
+            json=payload
+        )
+        if resp.status_code == 200:
+            cdata = resp.json().get("items", [])
+            for c in cdata:
+                cid = c.get("id")
+                name = c.get("name", "Անհայտ")
+                phones = c.get("phone", [])
+                phone = phones[0] if phones else "Չկա"
+                customers_map[cid] = {"name": name, "phone": phone}
+                
+    return {"lessons": target_lessons, "customers": customers_map}
+
+@dp.message(Command("getprob"))
+async def cmd_getprob(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    
+    await message.answer("🔄 Բեռնում եմ այս շաբաթվա գրանցվածները...")
+    
+    data = await fetch_probation_details()
+    if data is None:
+        await message.answer("❌ Սխալ՝ չհաջողվեց կապ հաստատել Alfa CRM-ի հետ:")
+        return
+        
+    if not data or not data.get("lessons"):
+        await message.answer("Այս շաբաթվա համար գրանցված փորձնական դասեր չկան:")
+        return
+        
+    DAYS = ["Երկուշաբթի", "Երեքշաբթի", "Չորեքշաբթի", "Հինգշաբթի", "Ուրբաթ", "Շաբաթ", "Կիրակի"]
+    
+    schedule = {}
+    for lesson in data["lessons"]:
+        w = lesson["weekday"]
+        t = lesson["time"]
+        s = lesson["subject"]
+        if w not in schedule: schedule[w] = {}
+        if t not in schedule[w]: schedule[w][t] = {}
+        if s not in schedule[w][t]: schedule[w][t][s] = []
+        schedule[w][t][s].extend(lesson["customers"])
+        
+    text = "🟢 <b>Այս շաբաթվա գրանցված փորձնական դասերը</b>\n\n"
+    for w in sorted(schedule.keys()):
+        text += f"📅 <b>{DAYS[w]}</b>\n"
+        for t in sorted(schedule[w].keys()):
+            for s, c_list in schedule[w][t].items():
+                text += f"🕒 {t} — {s}\n"
+                for cid in c_list:
+                    c = data["customers"].get(cid, {})
+                    name = c.get("name", "Անհայտ")
+                    if name.startswith("G.N | "):
+                        name = name[6:]
+                    # Escape HTML for name
+                    name = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    phone = c.get("phone", "Չկա")
+                    if phone != "Չկա":
+                        phone_clean = "".join(filter(str.isdigit, phone))
+                        if phone.startswith("+"): phone_clean = "+" + phone_clean
+                        phone_link = f'<a href="tel:{phone_clean}">{phone}</a>'
+                    else:
+                        phone_link = phone
+                        
+                    card_link = f'<a href="https://robixlab.s20.online/company/1/customer/view?id={cid}">Անկետա</a>'
+                    text += f"  👤 {name} - {card_link} - {phone_link}\n"
+                text += "\n"
+        text += "—\n"
+        
+    if text.endswith("—\n"): text = text[:-2]
+    
+    if len(text) > 4000:
+        for x in range(0, len(text), 4000):
+            await message.answer(text[x:x+4000], parse_mode="HTML", disable_web_page_preview=True)
+    else:
+        await message.answer(text, parse_mode="HTML", disable_web_page_preview=True)
 async def cmd_freeprob(message: types.Message):
     if message.from_user.id != ADMIN_ID: return
     
