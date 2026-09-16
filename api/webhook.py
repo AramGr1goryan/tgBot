@@ -279,6 +279,7 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
         "pay_item_id": income_item_id,
         "pay_type_id": 1,
         "branch_id": 1,
+        "location_id": 5,
         "payer_name": payer_name,
         "income": amount
     }
