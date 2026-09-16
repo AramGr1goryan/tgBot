@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ForceReply, InlineKeyboardButton, InlineKeyboardMarkup
@@ -507,10 +507,13 @@ import json
 
 def get_mapping(filename):
     try:
-        with open(filename, 'r', encoding='utf-8') as f:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        file_path = os.path.join(base_dir, filename)
+        with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
             return {item['id']: item['name'] for item in data}
-    except Exception:
+    except Exception as e:
+        print(f"Error loading {filename}: {e}")
         return {}
 
 ROOMS_MAP = get_mapping('rooms.json')
