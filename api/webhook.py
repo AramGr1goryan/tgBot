@@ -36,7 +36,7 @@ async def process_payment(message: types.Message):
         await message.answer("Привет! Отправь мне сообщение в формате:\nName Surname Payment_sum Payment_Method")
         return
 
-    if text.startswith('/Օգնություն'):
+    if text.startswith('/help'):
         await message.answer(
             "Как правильно писать сообщения:\n\n"
             "Формат: Имя Фамилия Сумма Метод\n\n"
