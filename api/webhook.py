@@ -162,11 +162,28 @@ async def process_payment(message: types.Message):
 
 @app.post("/api/webhook")
 async def webhook(request: Request):
+    print("Webhook endpoint triggered")
     if not bot:
+        print("Error: BOT_TOKEN is not set")
         return {"error": "BOT_TOKEN is not set"}
         
-    update_data = await request.json()
-    update = types.Update(**update_data)
-    
-    await dp.feed_update(bot, update)
+    try:
+        update_data = await request.json()
+        print(f"Update received: {update_data.get('update_id')}")
+        update = types.Update(**update_data)
+        
+        import asyncio
+        print("Starting dp.feed_update")
+        # Ограничиваем время выполнения 4 секундами, чтобы Vercel не убивал процесс молча на 5 секундах
+        await asyncio.wait_for(dp.feed_update(bot, update), timeout=4.0)
+        print("Finished dp.feed_update successfully")
+    except asyncio.TimeoutError:
+        print("CRITICAL ERROR: Timeout! The process hung for more than 4 seconds.")
+        return {"error": "Timeout"}
+    except Exception as e:
+        print(f"CRITICAL ERROR: {repr(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
+        
     return {"status": "ok"}
