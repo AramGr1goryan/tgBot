@@ -28,6 +28,7 @@ PAYMENT_METHODS = {
 
 db_initialized = False
 BANNED_USERS = set()
+EXECUTORS = {}
 
 async def ensure_db():
     global db_initialized, BANNED_USERS
@@ -46,9 +47,18 @@ async def ensure_db():
     await conn.execute('''CREATE TABLE IF NOT EXISTS banned_users
                  (user_id BIGINT PRIMARY KEY)''')
                  
+    # Таблица для исполнителей (кассиров)
+    await conn.execute('''CREATE TABLE IF NOT EXISTS executors
+                 (user_id BIGINT PRIMARY KEY, name TEXT)''')
+                 
     # Загружаем забаненных пользователей в память при холодном старте
     rows = await conn.fetch("SELECT user_id FROM banned_users")
     BANNED_USERS = {row['user_id'] for row in rows}
+    
+    # Загружаем имена исполнителей в память
+    exec_rows = await conn.fetch("SELECT user_id, name FROM executors")
+    for row in exec_rows:
+        EXECUTORS[row['user_id']] = row['name']
     
     await conn.close()
     db_initialized = True
@@ -84,7 +94,43 @@ def transliterate_name(text: str) -> str:
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("Ողջույն: Ուղարկեք ինձ հաղորդագրություն հետևյալ ձևաչափով՝\nԱնուն Ազգանուն Գումար Վճարման_Եղանակ")
+    await message.answer(
+        "Ողջույն: Որպեսզի ես կարողանամ ուղարկել վճարումները խմբին, ինձ անհրաժեշտ է իմանալ ձեր անունը:\n\n"
+        "Գրեք ձեր անունը ռուսերենով (օրինակ՝ Рипсиме):",
+        reply_markup=ForceReply(selective=True)
+    )
+
+def is_name_reply(message: types.Message) -> bool:
+    if not message.reply_to_message or not message.reply_to_message.text:
+        return False
+    return "Գրեք ձեր անունը ռուսերենով" in message.reply_to_message.text
+
+@dp.message(is_name_reply)
+async def process_name_registration(message: types.Message):
+    name = message.text.strip()
+    
+    # Проверка на то, что имя написано русскими буквами
+    if not re.match(r'^[А-Яа-яЁё\s]+$', name):
+        await message.answer(
+            "Խնդրում ենք գրել միայն ռուսերեն տառերով (օրինակ՝ Рипсиме):",
+            reply_markup=ForceReply(selective=True)
+        )
+        return
+        
+    await ensure_db()
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+    await conn.execute(
+        "INSERT INTO executors (user_id, name) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET name = EXCLUDED.name",
+        message.from_user.id, name
+    )
+    await conn.close()
+    
+    EXECUTORS[message.from_user.id] = name
+    await message.answer(
+        f"✅ Ձեր անունը պահպանված է որպես '{name}':\n\n"
+        "Այժմ կարող եք ուղարկել հաղորդագրություններ վճարումների համար հետևյալ ձևաչափով՝\n"
+        "Անուն Ազգանուն Գումար Վճարման_Եղանակ"
+    )
 
 @dp.message(Command("getid"))
 async def cmd_getid(message: types.Message):
@@ -360,6 +406,13 @@ async def process_payment(message: types.Message):
     if text.startswith('/'):
         return
 
+    # Проверка, зарегистрировал ли пользователь свое имя
+    if message.from_user.id not in EXECUTORS:
+        await message.answer("Խնդրում ենք նախ գրանցել ձեր անունը՝ սեղմելով /start հրամանը:")
+        return
+        
+    executor_name = EXECUTORS[message.from_user.id]
+
     parts = text.split()
     if len(parts) < 4:
         await message.answer("Սխալ ձևաչափ:\nԽնդրում ենք օգտագործել հետևյալ ձևաչափը՝ Անուն Ազգանուն Գումար Վճարման_Եղանակ")
@@ -372,7 +425,7 @@ async def process_payment(message: types.Message):
     name_russian = transliterate_name(name_english)
     payment_method = PAYMENT_METHODS.get(payment_method_raw, payment_method_raw)
     
-    response = f"G.N | {name_russian} | {payment_sum} | {payment_method}"
+    response = f"Платеж обработал(а): {executor_name}\nG.N | {name_russian} | {payment_sum} | {payment_method}"
     await message.answer(response)
 
     if GROUP_CHAT_ID:
