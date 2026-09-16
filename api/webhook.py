@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Request
+﻿from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import ForceReply
+from aiogram.types import ForceReply, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from transliterate import translit
 import asyncpg
 import os
@@ -36,6 +37,7 @@ db_initialized = False
 BANNED_USERS = set()
 EXECUTORS = {}
 KNOWN_USERS = set()
+PENDING_PAYMENTS = {}
 
 PROB_SCHEDULE = {
     0: ("Երկուշաբթի", "• 15:00 — Lego (6 աշակերտ) կամ Makeblock (3 աշակերտ)\n• 17:00 — Lego (2 աշակերտ)\n• 18:30 — Lego (3 աշակերտ)"),
@@ -157,6 +159,141 @@ def _parse_lessons(items, tz):
             "participants": participants
         })
     return booked_slots
+
+async def get_alfacrm_customer_by_name(name: str):
+    token = await get_alfacrm_token()
+    if not token: return None
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    # Փնտրում ենք անունով
+    async with httpx.AsyncClient() as client:
+        payload = {"name": name}
+        try:
+            response = await client.post(
+                "https://robixlab.s20.online/v2api/1/customer/index",
+                headers=headers,
+                json=payload,
+                timeout=10.0
+            )
+            if response.status_code == 200:
+                data = response.json()
+                items = data.get("items", [])
+                if items:
+                    return items[0]
+        except Exception as e:
+            print(f"Error searching customer: {e}")
+            
+    return None
+
+async def get_alfacrm_customer_by_id(customer_id: int):
+    token = await get_alfacrm_token()
+    if not token: return None
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                "https://robixlab.s20.online/v2api/1/customer/index",
+                headers=headers,
+                json={"id": customer_id},
+                timeout=10.0
+            )
+            if response.status_code == 200:
+                items = response.json().get("items", [])
+                if items: return items[0]
+        except Exception:
+            pass
+    return None
+
+async def check_customer_rooms(customer_id: int) -> bool:
+    token = await get_alfacrm_token()
+    if not token: return False
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        payload = {"customer_id": customer_id}
+        try:
+            response = await client.post(
+                "https://robixlab.s20.online/v2api/1/lesson/index",
+                headers=headers,
+                json=payload,
+                timeout=10.0
+            )
+            if response.status_code == 200:
+                items = response.json().get("items", [])
+                for lesson in items:
+                    if lesson.get("room_id") in [33, 34]:
+                        return True
+        except Exception as e:
+            print(f"Error checking rooms: {e}")
+    return False
+
+async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str, payer_name: str):
+    token = await get_alfacrm_token()
+    if not token: return False
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    # Account Mapping
+    method = method_raw.lower()
+    if method == 'n':
+        pay_account_id = 5 # Касса Шенгавит
+    elif method == 'b.n':
+        pay_account_id = 6 # Терминал Шенгавит
+    elif method in ['c', 'с']:
+        pay_account_id = 2 # На карту
+    else:
+        pay_account_id = 5
+        
+    # Item Mapping
+    if amount == 2000:
+        income_item_id = 3 # Пробный урок
+    else:
+        income_item_id = 1 # Курсы
+        
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    payload = {
+        "customer_id": customer_id,
+        "document_date": today,
+        "pay_account_id": pay_account_id,
+        "pay_item_category_id": 1,
+        "income_item_id": income_item_id,
+        "payer_name": payer_name,
+        "income": amount
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                "https://robixlab.s20.online/v2api/1/pay/create",
+                headers=headers,
+                json=payload,
+                timeout=10.0
+            )
+            return response.status_code == 200
+        except Exception as e:
+            print(f"Error creating payment: {e}")
+    return False
 
 async def _fetch_status(client, headers, date_from, date_to, status_val):
     items = []
@@ -687,31 +824,49 @@ async def cmd_checktasks(message: types.Message):
         await message.answer("Առաջադրանքների ցանկը դատարկ է:")
         return
         
-    response = ""
-    for task in tasks:
-        response += f"Task{task['id']} - {task['description']}\n"
-    await message.answer(response)
-
-@dp.message(F.text.regexp(r'^/[Tt][Aa][Ss][Kk](\d+)$'))
-async def cmd_complete_task(message: types.Message):
-    if not POSTGRES_URL:
-        await message.answer("Բազան միացված չէ (POSTGRES_URL is missing):")
-        return
-
-    match = re.match(r'^/task(\d+)$', message.text, re.IGNORECASE)
-    if not match:
-        return
-    task_id = int(match.group(1))
+    response = "📝 **Առաջադրանքների ցանկ:**\n\n"
+    builder = InlineKeyboardBuilder()
     
-    await ensure_db()
-    task_desc = await delete_task(task_id)
-    if task_desc:
-        await message.answer(f"Task{task_id} - {task_desc} կատարված է")
+    for task in tasks:
+        t_id = task['id']
+        t_desc = task['description']
+        response += f"🔹 **Task{t_id}** - {t_desc}\n"
+        builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_{t_id}")
+    builder.adjust(2)
         
-        user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-        await bot.send_message(ADMIN_ID, f"Ադմինիստրատոր {user_info} կատարեց առաջադրանքը:\nTask{task_id} - {task_desc}")
+    await message.answer(response, parse_mode="Markdown", reply_markup=builder.as_markup())
+
+@dp.callback_query(F.data.startswith("complete_"))
+async def callback_complete_task(callback: types.CallbackQuery):
+    await ensure_db()
+    task_id = int(callback.data.split("_")[1])
+    
+    task_desc = await delete_task(task_id)
+    if not task_desc:
+        await callback.answer("Այս առաջադրանքը արդեն կատարված է կամ ջնջված։", show_alert=True)
     else:
-        await message.answer("Առաջադրանքը չի գտնվել:")
+        await callback.answer(f"✅ Task{task_id} կատարված է։")
+        user_info = f"@{callback.from_user.username}" if callback.from_user.username else callback.from_user.full_name
+        
+        # Notify the admin (or group) that it was completed
+        await bot.send_message(ADMIN_ID, f"Առաջադրանքը {user_info}-ի կողմից կատարվել է:\nTask{task_id} - {task_desc}")
+                
+    tasks = await get_tasks()
+    if not tasks:
+        await callback.message.edit_text("🎉 Բոլոր առաջադրանքները կատարված են։", parse_mode="Markdown")
+        return
+        
+    response = "📝 **Առաջադրանքների ցանկ:**\n\n"
+    builder = InlineKeyboardBuilder()
+    
+    for task in tasks:
+        t_id = task['id']
+        t_desc = task['description']
+        response += f"🔹 **Task{t_id}** - {t_desc}\n"
+        builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_{t_id}")
+    builder.adjust(2)
+        
+    await callback.message.edit_text(response, parse_mode="Markdown", reply_markup=builder.as_markup())
 
 @dp.message(Command("task"))
 async def cmd_task_hint(message: types.Message):
@@ -945,6 +1100,42 @@ async def process_payment(message: types.Message):
         "⚠️ Ուշադրություն դարձրեք, որ գումարը պետք է լինի միայն թվերով, իսկ եղանակը՝ նշված տարբերակներից մեկը։"
     )
 
+    # URL Handle
+    if text.startswith('http') and 'customer/view?id=' in text:
+        if message.from_user.id in PENDING_PAYMENTS:
+            customer_id_str = text.split('id=')[-1].split('&')[0]
+            if not customer_id_str.isdigit():
+                await message.answer("❌ Սխալ հղում:")
+                return
+            customer_id = int(customer_id_str)
+            pending = PENDING_PAYMENTS.pop(message.from_user.id)
+            
+            await message.answer("🔄 Կապվում եմ Alfa CRM-ի հետ...")
+            customer = await get_alfacrm_customer_by_id(customer_id)
+            if not customer:
+                await message.answer("❌ Աշակերտը չգտնվեց նշված հղումով:")
+                return
+                
+            payer_name = customer.get("legal_name") or customer.get("name", "Անհայտ")
+            success = await create_alfacrm_payment(customer_id, pending['amount'], pending['method_raw'], payer_name)
+            
+            if success:
+                await message.answer(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում ({customer.get('name')}):")
+                if GROUP_CHAT_ID:
+                    try:
+                        chat_id_int = int(GROUP_CHAT_ID)
+                        thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+                        await bot.send_message(
+                            chat_id_int, pending['response_text'], message_thread_id=thread_id_int
+                        )
+                    except Exception as e:
+                        print(f"Failed to send to group: {e}")
+            else:
+                await message.answer("❌ Սխալ տեղի ունեցավ CRM-ում վճարումը գրանցելիս:")
+        else:
+            await message.answer("❌ Դուք չունեք սպասվող վճարում:")
+        return
+
     parts = text.split()
     if len(parts) < 3:
         await message.answer(ERROR_INSTRUCTION, parse_mode="Markdown")
@@ -958,26 +1149,60 @@ async def process_payment(message: types.Message):
         await message.answer(ERROR_INSTRUCTION, parse_mode="Markdown")
         return
 
+    amount_int = int(clean_sum)
     name_english = " ".join(parts[:-2])
-    
     name_russian = transliterate_name(name_english)
     payment_method = PAYMENT_METHODS.get(payment_method_raw, payment_method_raw)
     
-    response = f"Платеж обработал(а): {executor_name}\nG.N | {name_russian} | {payment_sum} | {payment_method}"
-    await message.answer(response)
-
-    if GROUP_CHAT_ID:
-        try:
-            chat_id_int = int(GROUP_CHAT_ID)
-            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
-            await bot.send_message(
-                chat_id=chat_id_int,
-                text=response,
-                message_thread_id=thread_id_int
-            )
-        except Exception as e:
-            print(f"Failed to send to group: {e}")
-
+    response_text = f"Վճարումը գրանցեց: {executor_name}\nG.N | {name_russian} | {payment_sum} | {payment_method}"
+    
+    processing_msg = await message.answer("🔄 Փնտրում եմ աշակերտին CRM-ում...")
+    
+    customer = await get_alfacrm_customer_by_name(name_russian)
+    
+    if not customer:
+        await processing_msg.edit_text("❌ Աշակերտը չգտնվեց Alfa CRM-ում: Վճարումը հաստատելու համար խնդրում ենք ուղարկել նրա CRM անկետայի հղումը:")
+        PENDING_PAYMENTS[message.from_user.id] = {
+            'amount': amount_int,
+            'method_raw': payment_method_raw,
+            'response_text': response_text
+        }
+        return
+        
+    customer_name = customer.get("name", "")
+    customer_id = customer.get("id")
+    
+    is_gn = False
+    if customer_name.startswith("G.N"):
+        is_gn = True
+    else:
+        is_gn = await check_customer_rooms(customer_id)
+        
+    if not is_gn:
+        await processing_msg.edit_text(f"❌ Գտնվել է «{customer_name}» աշակերտը, բայց նա Գարեգին Նժդեհ մասնաճյուղից չէ: Վճարումը հաստատելու համար ուղարկեք նրա CRM անկետայի հղումը:")
+        PENDING_PAYMENTS[message.from_user.id] = {
+            'amount': amount_int,
+            'method_raw': payment_method_raw,
+            'response_text': response_text
+        }
+        return
+        
+    payer_name = customer.get("legal_name") or customer_name
+    success = await create_alfacrm_payment(customer_id, amount_int, payment_method_raw, payer_name)
+    
+    if success:
+        await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում ({customer_name}):\n\n{response_text}")
+        if GROUP_CHAT_ID:
+            try:
+                chat_id_int = int(GROUP_CHAT_ID)
+                thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+                await bot.send_message(
+                    chat_id_int, response_text, message_thread_id=thread_id_int
+                )
+            except Exception as e:
+                print(f"Failed to send to group: {e}")
+    else:
+        await processing_msg.edit_text(f"❌ Սխալ տեղի ունեցավ CRM-ում վճարումը գրանցելիս: Ստուգեք Alfa CRM-ը:")
 @app.post("/api/webhook")
 async def webhook(request: Request):
     print("Webhook endpoint triggered")
@@ -1034,3 +1259,30 @@ async def webhook(request: Request):
         return {"error": str(e)}
         
     return {"status": "ok"}
+
+@app.get("/api/cron/tasks")
+async def cron_tasks():
+    await ensure_db()
+    tasks = await get_tasks()
+    if not tasks:
+        return {"status": "ok", "message": "No tasks"}
+        
+    if GROUP_CHAT_ID:
+        try:
+            chat_id_int = int(GROUP_CHAT_ID)
+            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+            
+            response = "⚠️ **Ուշադրություն! Անավարտ առաջադրանքներ**\n\n"
+            for task in tasks:
+                response += f"🔹 **Task{task['id']}** - {task['description']}\n"
+                
+            await bot.send_message(
+                chat_id_int, 
+                response,
+                message_thread_id=thread_id_int,
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            print(f"Failed to send cron to group: {e}")
+            
+    return {"status": "ok", "count": len(tasks)}
