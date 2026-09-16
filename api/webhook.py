@@ -1156,7 +1156,7 @@ async def process_payment(message: types.Message):
     name_russian = transliterate_name(name_english)
     payment_method = PAYMENT_METHODS.get(payment_method_raw, payment_method_raw)
     
-    response_text = f"Վճարումը գրանցեց: {executor_name}\nG.N | {name_russian} | {payment_sum} | {payment_method}"
+    response_text = f"Платеж обработал(а): {executor_name}\nG.N | {name_russian} | {payment_sum} | {payment_method}"
     
     processing_msg = await message.answer("🔄 Փնտրում եմ աշակերտին CRM-ում...")
     
