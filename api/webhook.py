@@ -160,7 +160,7 @@ async def process_html_upload(message: types.Message):
     if not message.document.file_name.endswith('.html'):
         return
         
-    await message.answer("Загружаю и обрабатываю HTML файл Lego...")
+    await message.answer("Բեռնում և մշակում եմ Lego-ի HTML ֆայլը...")
     file = await bot.get_file(message.document.file_id)
     file_bytes = BytesIO()
     await bot.download_file(file.file_path, file_bytes)
@@ -204,7 +204,7 @@ async def process_html_upload(message: types.Message):
         themes_added = len(themes_to_insert)
             
     await conn.close()
-    await message.answer(f"База Lego успешно обновлена!\nОбработано групп: {groups_added}\nДобавлено тем: {themes_added}")
+    await message.answer(f"Lego-ի բազան հաջողությամբ թարմացվել է:\nՄշակված խմբեր՝ {groups_added}\nԱվելացված թեմաներ՝ {themes_added}")
 
 @dp.message(Command("lego"))
 async def cmd_lego(message: types.Message):
@@ -213,7 +213,7 @@ async def cmd_lego(message: types.Message):
     
     group_query = message.text.replace("/lego", "", 1).strip()
     if not group_query:
-        await message.answer("Укажите имя группы, например: /lego Spider man")
+        await message.answer("Նշեք խմբի անունը, օրինակ՝ /lego Spider man")
         return
         
     await ensure_db()
@@ -223,7 +223,7 @@ async def cmd_lego(message: types.Message):
     groups = await conn.fetch("SELECT id, name FROM lego_groups WHERE name ILIKE $1 LIMIT 1", f"%{group_query}%")
     if not groups:
         await conn.close()
-        await message.answer(f"Группа '{group_query}' не найдена в базе.")
+        await message.answer(f"«{group_query}» խումբը չի գտնվել բազայում:")
         return
         
     group_id = groups[0]['id']
@@ -233,22 +233,22 @@ async def cmd_lego(message: types.Message):
     await conn.close()
     
     if not themes:
-        await message.answer(f"В группе '{group_name}' нет доступных тем (или они все пройдены).")
+        await message.answer(f"«{group_name}» խմբում հասանելի թեմաներ չկան (կամ բոլորն արդեն անցել են):")
         return
         
     themes_list = "\n".join([f"- {t['name']}" for t in themes])
-    prompt = f"Доступные темы для группы {group_name}:\n{themes_list}\n\nНапишите название темы, которую выбрали:"
+    prompt = f"Հասանելի թեմաներ «{group_name}» խմբի համար:\n{themes_list}\n\nԳրեք այն թեմայի անվանումը, որն ընտրել եք:"
     
     # Лимит Telegram - 4096 символов.
     if len(prompt) > 4000:
-        prompt = prompt[:4000] + "...\n\nНапишите название темы, которую выбрали:"
+        prompt = prompt[:4000] + "...\n\nԳրեք այն թեմայի անվանումը, որն ընտրել եք:"
         
     await message.answer(prompt, reply_markup=ForceReply(selective=True))
 
 def is_theme_reply(message: types.Message) -> bool:
     if not message.reply_to_message or not message.reply_to_message.text:
         return False
-    return "Доступные темы для группы" in message.reply_to_message.text
+    return "Հասանելի թեմաներ «" in message.reply_to_message.text
 
 @dp.message(is_theme_reply)
 async def process_theme_selection(message: types.Message):
@@ -257,7 +257,13 @@ async def process_theme_selection(message: types.Message):
         
     original_text = message.reply_to_message.text
     first_line = original_text.split('\n')[0]
-    group_name = first_line.replace("Доступные темы для группы ", "").replace(":", "").strip()
+    
+    # Извлекаем имя группы из строки "Հասանելի թեմաներ «{group_name}» խմբի համար:"
+    match_group = re.search(r'«(.*?)»', first_line)
+    if not match_group:
+        return
+    group_name = match_group.group(1).strip()
+    
     theme_choice = message.text.strip()
     
     await ensure_db()
@@ -266,7 +272,7 @@ async def process_theme_selection(message: types.Message):
     group_id = await conn.fetchval("SELECT id FROM lego_groups WHERE name = $1", group_name)
     if not group_id:
         await conn.close()
-        await message.answer("Ошибка: группа не найдена в базе.")
+        await message.answer("Սխալ․ խումբը բազայում չի գտնվել։")
         return
         
     deleted_id = await conn.fetchval(
@@ -277,9 +283,9 @@ async def process_theme_selection(message: types.Message):
     await conn.close()
     
     if deleted_id:
-        await message.answer(f"✅ Тема '{theme_choice}' выбрана и удалена из группы '{group_name}'!")
+        await message.answer(f"✅ «{theme_choice}» թեման ընտրված և հեռացված է «{group_name}» խմբից:")
     else:
-        await message.answer(f"❌ Тема '{theme_choice}' не найдена в группе '{group_name}'. Убедитесь, что написали без ошибок.")
+        await message.answer(f"❌ «{theme_choice}» թեման չի գտնվել «{group_name}» խմբում։ Համոզվեք, որ այն ճիշտ եք գրել։")
 
 @dp.message()
 async def process_payment(message: types.Message):
