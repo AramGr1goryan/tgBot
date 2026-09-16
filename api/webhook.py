@@ -164,7 +164,7 @@ async def _fetch_status(client, headers, date_from, date_to, status_val):
     items = []
     page = 0
     while True:
-        payload = {"date_from": date_from, "date_to": date_to, "page": page, "status": status_val}
+        payload = {"date_from": date_from, "date_to": date_to, "page": page, "status": status_val, "per-page": 100}
         # Explicitly fetching from Branch 5
         resp = await client.post(
             "https://robixlab.s20.online/v2api/5/lesson/index",
@@ -843,10 +843,10 @@ async def webhook(request: Request):
         
         import asyncio
         print("Starting dp.feed_update")
-        await asyncio.wait_for(dp.feed_update(bot, update), timeout=4.0)
+        await asyncio.wait_for(dp.feed_update(bot, update), timeout=8.0)
         print("Finished dp.feed_update successfully")
     except asyncio.TimeoutError:
-        print("CRITICAL ERROR: Timeout! The process hung for more than 4 seconds.")
+        print("CRITICAL ERROR: Timeout! The process hung for more than 8 seconds.")
         return {"error": "Timeout"}
     except Exception as e:
         print(f"CRITICAL ERROR: {repr(e)}")
