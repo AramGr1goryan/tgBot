@@ -175,29 +175,33 @@ async def process_html_upload(message: types.Message):
     groups_added = 0
     themes_added = 0
     
+    themes_to_insert = []
+    
     for row in rows:
         tds = row.find_all('td')
         if len(tds) < 2:
             continue
         group_name = tds[0].get_text(strip=True)
-        # Вставляем группу
+        
         group_id = await conn.fetchval(
             "INSERT INTO lego_groups (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id", 
             group_name
         )
         groups_added += 1
         
-        # Удаляем старые темы этой группы, чтобы загрузить свежие
         await conn.execute("DELETE FROM lego_themes WHERE group_id = $1", group_id)
         
         lis = tds[1].find_all('li')
         for li in lis:
             theme_name = li.get_text(strip=True)
-            await conn.execute(
-                "INSERT INTO lego_themes (group_id, name) VALUES ($1, $2)",
-                group_id, theme_name
-            )
-            themes_added += 1
+            themes_to_insert.append((group_id, theme_name))
+            
+    if themes_to_insert:
+        await conn.executemany(
+            "INSERT INTO lego_themes (group_id, name) VALUES ($1, $2)",
+            themes_to_insert
+        )
+        themes_added = len(themes_to_insert)
             
     await conn.close()
     await message.answer(f"База Lego успешно обновлена!\nОбработано групп: {groups_added}\nДобавлено тем: {themes_added}")
