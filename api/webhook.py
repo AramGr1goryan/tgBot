@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+﻿from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ForceReply, InlineKeyboardButton, InlineKeyboardMarkup
@@ -521,6 +521,58 @@ TEACHERS_MAP = {
     1071411870: {"id": 25, "name": "Նարե Ազարյան"},
     1037044744: {"id": 12, "name": "Լիա Ավետիսյան"}
 }
+
+async def check_uncompleted_lessons(bot: Bot):
+    token = await get_alfacrm_token()
+    if not token:
+        return {"status": "error", "message": "No CRM token"}
+        
+    tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+    today_str = datetime.now(tz).strftime("%Y-%m-%d")
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    messages_sent = 0
+    async with httpx.AsyncClient() as client:
+        for tg_id, teacher_info in TEACHERS_MAP.items():
+            teacher_id = teacher_info["id"]
+            try:
+                response = await client.post(
+                    "https://robixlab.s20.online/v2api/1/lesson/index",
+                    headers=headers,
+                    json={"teacher_id": teacher_id, "date_from": today_str, "date_to": today_str, "status": 1},
+                    timeout=10.0
+                )
+                if response.status_code == 200:
+                    items = response.json().get("items", [])
+                    if items:
+                        count = len(items)
+                        text = (
+                            f"🔔 **Ուշադրություն**\n\n"
+                            f"Հարգելի {teacher_info['name']}, դուք ունեք **{count}** չնշված (պլանավորված) դաս այսօր ({today_str}):\n\n"
+                            f"Խնդրում ենք մուտք գործել CRM և նշել դասերը որպես անցկացված:"
+                        )
+                        try:
+                            await bot.send_message(tg_id, text, parse_mode="Markdown")
+                            messages_sent += 1
+                        except Exception as e:
+                            print(f"Failed to send to {tg_id}: {e}")
+            except Exception as e:
+                print(f"Error fetching lessons for teacher {teacher_id}: {e}")
+                
+    return {"status": "ok", "reminders_sent": messages_sent}
+
+@dp.message(Command("testteacher"))
+async def cmd_testteacher(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    await message.answer("🔄 Սկսում եմ չնշված դասերի ստուգումը...")
+    result = await check_uncompleted_lessons(bot)
+    await message.answer(f"✅ Ստուգումն ավարտվեց:\nՈւղարկված նամակներ՝ {result.get('reminders_sent', 0)}")
 
 @dp.message(Command("myschedule"))
 async def cmd_myschedule(message: types.Message):
@@ -1365,6 +1417,13 @@ async def webhook(request: Request):
         return {"error": str(e)}
         
     return {"status": "ok"}
+
+@app.get("/api/cron/teachers")
+async def cron_teachers():
+    if not bot:
+        return {"status": "error", "message": "Bot not initialized"}
+    result = await check_uncompleted_lessons(bot)
+    return result
 
 @app.get("/api/cron/tasks")
 async def cron_tasks():
