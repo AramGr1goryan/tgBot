@@ -27,9 +27,10 @@ PAYMENT_METHODS = {
 }
 
 db_initialized = False
+BANNED_USERS = set()
 
 async def ensure_db():
-    global db_initialized
+    global db_initialized, BANNED_USERS
     if db_initialized or not POSTGRES_URL:
         return
     conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
@@ -40,6 +41,15 @@ async def ensure_db():
                  (id SERIAL PRIMARY KEY, name TEXT UNIQUE)''')
     await conn.execute('''CREATE TABLE IF NOT EXISTS lego_themes
                  (id SERIAL PRIMARY KEY, group_id INTEGER REFERENCES lego_groups(id) ON DELETE CASCADE, name TEXT)''')
+    
+    # Таблица для заблокированных пользователей
+    await conn.execute('''CREATE TABLE IF NOT EXISTS banned_users
+                 (user_id BIGINT PRIMARY KEY)''')
+                 
+    # Загружаем забаненных пользователей в память при холодном старте
+    rows = await conn.fetch("SELECT user_id FROM banned_users")
+    BANNED_USERS = {row['user_id'] for row in rows}
+    
     await conn.close()
     db_initialized = True
 
@@ -162,6 +172,48 @@ async def cmd_complete_task(message: types.Message):
 @dp.message(Command("task"))
 async def cmd_task_hint(message: types.Message):
     await message.answer("Խնդրում ենք նշել առաջադրանքի համարը, օրինակ՝ /task1")
+
+@dp.message(Command("ban"))
+async def cmd_ban(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    parts = message.text.split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        await message.answer("Նշեք օգտատիրոջ ID-ն: Օրինակ՝ /ban 123456789")
+        return
+        
+    target_id = int(parts[1])
+    if target_id == ADMIN_ID:
+        await message.answer("Դուք չեք կարող բլոկավորել ինքներդ ձեզ:")
+        return
+        
+    await ensure_db()
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+    await conn.execute("INSERT INTO banned_users (user_id) VALUES ($1) ON CONFLICT DO NOTHING", target_id)
+    await conn.close()
+    
+    BANNED_USERS.add(target_id)
+    await message.answer(f"✅ Օգտատեր {target_id}-ը բլոկավորված է և չի կարող օգտվել բոտից:")
+
+@dp.message(Command("unban"))
+async def cmd_unban(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    parts = message.text.split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        await message.answer("Նշեք օգտատիրոջ ID-ն: Օրինակ՝ /unban 123456789")
+        return
+        
+    target_id = int(parts[1])
+    
+    await ensure_db()
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+    await conn.execute("DELETE FROM banned_users WHERE user_id = $1", target_id)
+    await conn.close()
+    
+    if target_id in BANNED_USERS:
+        BANNED_USERS.remove(target_id)
+    await message.answer(f"✅ Օգտատեր {target_id}-ի բլոկավորումը հանված է:")
 
 # Загрузка HTML файла с темами Lego
 @dp.message(F.document)
@@ -346,6 +398,20 @@ async def webhook(request: Request):
         update_data = await request.json()
         print(f"Update received: {update_data.get('update_id')}")
         update = types.Update(**update_data)
+        
+        # Инициализируем базу данных и загружаем забаненных пользователей
+        await ensure_db()
+        
+        # Проверяем, не забанен ли пользователь (игнорируем апдейт, если да)
+        user_id = None
+        if update.message and update.message.from_user:
+            user_id = update.message.from_user.id
+        elif update.callback_query and update.callback_query.from_user:
+            user_id = update.callback_query.from_user.id
+            
+        if user_id and user_id in BANNED_USERS:
+            print(f"Ignored update from banned user {user_id}")
+            return {"status": "ok"}
         
         import asyncio
         print("Starting dp.feed_update")
