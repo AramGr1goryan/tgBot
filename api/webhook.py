@@ -498,20 +498,23 @@ async def fetch_probation_details():
         
     customers_map = {}
     async with httpx.AsyncClient() as client:
-        payload = {"id": list(customer_ids), "per-page": max(200, len(customer_ids))}
-        resp = await client.post(
-            "https://robixlab.s20.online/v2api/1/customer/index",
-            headers=headers,
-            json=payload
+        payload_students = {"id": list(customer_ids), "per-page": max(200, len(customer_ids))}
+        payload_leads = {"id": list(customer_ids), "is_study": 0, "per-page": max(200, len(customer_ids))}
+        
+        reqs = await asyncio.gather(
+            client.post("https://robixlab.s20.online/v2api/1/customer/index", headers=headers, json=payload_students),
+            client.post("https://robixlab.s20.online/v2api/1/customer/index", headers=headers, json=payload_leads)
         )
-        if resp.status_code == 200:
-            cdata = resp.json().get("items", [])
-            for c in cdata:
-                cid = c.get("id")
-                name = c.get("name", "Անհայտ")
-                phones = c.get("phone", [])
-                phone = phones[0] if phones else "Չկա"
-                customers_map[cid] = {"name": name, "phone": phone}
+        
+        for resp in reqs:
+            if resp.status_code == 200:
+                cdata = resp.json().get("items", [])
+                for c in cdata:
+                    cid = c.get("id")
+                    name = c.get("name", "Անհայտ")
+                    phones = c.get("phone", [])
+                    phone = phones[0] if phones else "Չկա"
+                    customers_map[cid] = {"name": name, "phone": phone}
                 
     return {"lessons": target_lessons, "customers": customers_map}
 
