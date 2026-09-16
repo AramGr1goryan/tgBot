@@ -113,10 +113,7 @@ def _parse_lessons(items, tz):
     now = datetime.now(tz)
     booked_slots = []
     for item in items:
-        # Strictly ensure we only process Branch 5 (Гарегин Нжде)
-        if item.get("branch_id") != 5:
-            continue
-            
+        r_id = item.get("room_id")
         s_id = item.get("subject_id")
         t_id = item.get("lesson_type_id")
         
@@ -124,10 +121,11 @@ def _parse_lessons(items, tz):
         if t_id not in [3, 9]:
             continue
             
+        # Location Garegin Nzhdeh uses room 33 for Lego and room 34 for MakeBlock
         subject = None
-        if s_id == 24:
+        if s_id == 24 and r_id == 33:
             subject = "Lego"
-        elif s_id == 23:
+        elif s_id == 23 and r_id == 34:
             subject = "MakeBlock"
             
         if not subject:
@@ -165,9 +163,8 @@ async def _fetch_status(client, headers, date_from, date_to, status_val):
     page = 0
     while True:
         payload = {"date_from": date_from, "date_to": date_to, "page": page, "status": status_val, "per-page": 100}
-        # Explicitly fetching from Branch 5
         resp = await client.post(
-            "https://robixlab.s20.online/v2api/5/lesson/index",
+            "https://robixlab.s20.online/v2api/1/lesson/index",
             headers=headers,
             json=payload
         )
