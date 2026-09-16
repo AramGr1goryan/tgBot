@@ -8,6 +8,8 @@ import re
 
 API_TOKEN = os.getenv("BOT_TOKEN")
 POSTGRES_URL = os.getenv("POSTGRES_URL")
+GROUP_CHAT_ID = os.getenv("GROUP_CHAT_ID")
+TOPIC_THREAD_ID = os.getenv("TOPIC_THREAD_ID")
 ADMIN_ID = 1472817960
 
 bot = Bot(token=API_TOKEN) if API_TOKEN else None
@@ -65,6 +67,13 @@ def transliterate_name(text: str) -> str:
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer("Ողջույն: Ուղարկեք ինձ հաղորդագրություն հետևյալ ձևաչափով՝\nԱնուն Ազգանուն Գումար Վճարման_Եղանակ")
+
+@dp.message(Command("getid"))
+async def cmd_getid(message: types.Message):
+    await message.answer(
+        f"Chat ID: {message.chat.id}\n"
+        f"Topic (Thread) ID: {message.message_thread_id}"
+    )
 
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
@@ -159,6 +168,18 @@ async def process_payment(message: types.Message):
     
     response = f"G.N | {name_russian} | {payment_sum} | {payment_method}"
     await message.answer(response)
+
+    if GROUP_CHAT_ID:
+        try:
+            chat_id_int = int(GROUP_CHAT_ID)
+            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+            await bot.send_message(
+                chat_id=chat_id_int,
+                text=response,
+                message_thread_id=thread_id_int
+            )
+        except Exception as e:
+            print(f"Failed to send to group: {e}")
 
 @app.post("/api/webhook")
 async def webhook(request: Request):
