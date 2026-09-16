@@ -123,60 +123,75 @@ async def fetch_probation_lessons():
     date_to = sunday.strftime("%Y-%m-%d")
     
     headers = {"X-ALFACRM-TOKEN": token, "Content-Type": "application/json"}
-    payload = {"date_from": date_from, "date_to": date_to}
+    
+    booked_slots = []
+    page = 0
     
     async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            "https://robixlab.s20.online/v2api/1/lesson/index",
-            headers=headers,
-            json=payload
-        )
-        data = resp.json()
-        
-    items = data.get("items", [])
-    booked_slots = []
-    
-    for item in items:
-        if item.get("status") == 3: # Отменен
-            continue
+        while True:
+            payload = {"date_from": date_from, "date_to": date_to, "page": page}
+            resp = await client.post(
+                "https://robixlab.s20.online/v2api/1/lesson/index",
+                headers=headers,
+                json=payload
+            )
+            if resp.status_code != 200:
+                print(f"ALFACRM FETCH ERROR: {resp.status_code} {resp.text}")
+                break
+                
+            data = resp.json()
+            items = data.get("items", [])
             
-        r_id = item.get("room_id")
-        s_id = item.get("subject_id")
-        t_id = item.get("lesson_type_id")
-        
-        if t_id not in [3, 8, 9]:
-            continue
-            
-        subject = None
-        if s_id == 24 and r_id in [30, 33]:
-            subject = "Lego"
-        elif s_id == 23 and r_id in [31, 34]:
-            subject = "MakeBlock"
-            
-        if not subject:
-            continue
-            
-        details = item.get("details", [])
-        participants = len(details)
-        if participants == 0:
-            continue
-            
-        date_str = item.get("date")
-        dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=tz)
-        weekday = dt.weekday()
-        
-        time_from = item.get("time_from")
-        time_only = time_from.split(" ")[1][:5]
-        
-        if weekday == 4 and "13:00" <= time_only <= "16:00":
-            time_only = "13:00-16:00"
-            
-        booked_slots.append({
-            "weekday": weekday,
-            "time": time_only,
-            "subject": subject,
-            "participants": participants
-        })
+            if not items:
+                break
+                
+            for item in items:
+                if item.get("status") == 3: # Отменен
+                    continue
+                    
+                r_id = item.get("room_id")
+                s_id = item.get("subject_id")
+                t_id = item.get("lesson_type_id")
+                
+                if t_id not in [3, 8, 9]:
+                    continue
+                    
+                subject = None
+                if s_id == 24 and r_id in [30, 33]:
+                    subject = "Lego"
+                elif s_id == 23 and r_id in [31, 34]:
+                    subject = "MakeBlock"
+                    
+                if not subject:
+                    continue
+                    
+                details = item.get("details", [])
+                participants = len(details)
+                if participants == 0:
+                    continue
+                    
+                date_str = item.get("date")
+                dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=tz)
+                weekday = dt.weekday()
+                
+                time_from = item.get("time_from")
+                time_only = time_from.split(" ")[1][:5]
+                
+                if weekday == 4 and "13:00" <= time_only <= "16:00":
+                    time_only = "13:00-16:00"
+                    
+                booked_slots.append({
+                    "weekday": weekday,
+                    "time": time_only,
+                    "subject": subject,
+                    "participants": participants
+                })
+                
+            # If we received fewer items than requested, it's the last page
+            if len(items) < 20 or page >= 15:
+                break
+                
+            page += 1
         
     return booked_slots
 
