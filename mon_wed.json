@@ -1,0 +1,347 @@
+﻿[
+    {
+        "id":  55706,
+        "branch_id":  1,
+        "date":  "2026-09-16",
+        "time_from":  "2026-09-16 18:00:01",
+        "time_to":  "2026-09-16 18:50:00",
+        "lesson_type_id":  3,
+        "lesson_type_name":  "Пробный",
+        "status":  2,
+        "subject_id":  23,
+        "room_id":  31,
+        "teacher_ids":  [
+
+                        ],
+        "customer_ids":  [
+                             3378
+                         ],
+        "group_ids":  [
+
+                      ],
+        "streaming":  false,
+        "note":  "",
+        "topic":  "",
+        "homework":  null,
+        "created_at":  "2026-09-15 09:36:00",
+        "updated_at":  "2026-09-16 06:08:47",
+        "regular_id":  null,
+        "details":  [
+                        {
+                            "id":  144625,
+                            "branch_id":  1,
+                            "customer_id":  3378,
+                            "lesson_id":  55706,
+                            "ctt_id":  null,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  null,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  null,
+                            "note":  null
+                        }
+                    ],
+        "custom_tema":  "",
+        "custom_uroka":  ""
+    },
+    {
+        "id":  53739,
+        "branch_id":  1,
+        "date":  "2026-09-15",
+        "time_from":  "2026-09-15 17:30:01",
+        "time_to":  "2026-09-15 18:20:00",
+        "lesson_type_id":  3,
+        "lesson_type_name":  "Пробный",
+        "status":  2,
+        "subject_id":  23,
+        "room_id":  31,
+        "teacher_ids":  [
+
+                        ],
+        "customer_ids":  [
+                             3395
+                         ],
+        "group_ids":  [
+
+                      ],
+        "streaming":  false,
+        "note":  "",
+        "topic":  "",
+        "homework":  null,
+        "created_at":  "2026-09-10 12:10:09",
+        "updated_at":  "2026-09-15 08:30:29",
+        "regular_id":  null,
+        "details":  [
+                        {
+                            "id":  142063,
+                            "branch_id":  1,
+                            "customer_id":  3395,
+                            "lesson_id":  53739,
+                            "ctt_id":  null,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  null,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  null,
+                            "note":  null
+                        }
+                    ],
+        "custom_tema":  "",
+        "custom_uroka":  ""
+    },
+    {
+        "id":  54225,
+        "branch_id":  1,
+        "date":  "2026-09-15",
+        "time_from":  "2026-09-15 17:30:01",
+        "time_to":  "2026-09-15 18:20:00",
+        "lesson_type_id":  3,
+        "lesson_type_name":  "Пробный",
+        "status":  2,
+        "subject_id":  23,
+        "room_id":  31,
+        "teacher_ids":  [
+
+                        ],
+        "customer_ids":  [
+                             3414
+                         ],
+        "group_ids":  [
+
+                      ],
+        "streaming":  false,
+        "note":  "",
+        "topic":  "",
+        "homework":  null,
+        "created_at":  "2026-09-12 07:41:04",
+        "updated_at":  "2026-09-15 07:15:34",
+        "regular_id":  null,
+        "details":  [
+                        {
+                            "id":  143411,
+                            "branch_id":  1,
+                            "customer_id":  3414,
+                            "lesson_id":  54225,
+                            "ctt_id":  null,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  null,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  null,
+                            "note":  null
+                        }
+                    ],
+        "custom_tema":  "",
+        "custom_uroka":  ""
+    },
+    {
+        "id":  22168,
+        "branch_id":  1,
+        "date":  "2026-09-15",
+        "time_from":  "2026-09-15 14:00:01",
+        "time_to":  "2026-09-15 14:50:00",
+        "lesson_type_id":  2,
+        "lesson_type_name":  "Групповой",
+        "status":  2,
+        "subject_id":  17,
+        "room_id":  36,
+        "teacher_ids":  [
+                            27
+                        ],
+        "customer_ids":  [
+                             1622,
+                             1673
+                         ],
+        "group_ids":  [
+                          158
+                      ],
+        "streaming":  false,
+        "note":  "",
+        "topic":  "",
+        "homework":  null,
+        "created_at":  "2026-03-09 14:35:34",
+        "updated_at":  "2026-09-16 09:42:08",
+        "regular_id":  506,
+        "details":  [
+                        {
+                            "id":  75277,
+                            "branch_id":  1,
+                            "customer_id":  1622,
+                            "lesson_id":  22168,
+                            "ctt_id":  null,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  null,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  null,
+                            "note":  null
+                        },
+                        {
+                            "id":  75278,
+                            "branch_id":  1,
+                            "customer_id":  1673,
+                            "lesson_id":  22168,
+                            "ctt_id":  null,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  null,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  null,
+                            "note":  null
+                        }
+                    ],
+        "custom_tema":  "",
+        "custom_uroka":  ""
+    },
+    {
+        "id":  31850,
+        "branch_id":  1,
+        "date":  "2026-09-14",
+        "time_from":  "2026-09-14 19:00:01",
+        "time_to":  "2026-09-14 19:50:00",
+        "lesson_type_id":  1,
+        "lesson_type_name":  "Индивидуальный",
+        "status":  2,
+        "subject_id":  19,
+        "room_id":  36,
+        "teacher_ids":  [
+                            27
+                        ],
+        "customer_ids":  [
+                             2077
+                         ],
+        "group_ids":  [
+
+                      ],
+        "streaming":  false,
+        "note":  "",
+        "topic":  "",
+        "homework":  null,
+        "created_at":  "2026-05-16 07:44:28",
+        "updated_at":  "2026-09-16 09:42:57",
+        "regular_id":  700,
+        "details":  [
+                        {
+                            "id":  101048,
+                            "branch_id":  1,
+                            "customer_id":  2077,
+                            "lesson_id":  31850,
+                            "ctt_id":  null,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  null,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  null,
+                            "note":  null
+                        }
+                    ],
+        "custom_tema":  "",
+        "custom_uroka":  ""
+    },
+    {
+        "id":  53029,
+        "branch_id":  1,
+        "date":  "2026-09-14",
+        "time_from":  "2026-09-14 17:00:01",
+        "time_to":  "2026-09-14 17:50:00",
+        "lesson_type_id":  3,
+        "lesson_type_name":  "Пробный",
+        "status":  2,
+        "subject_id":  24,
+        "room_id":  30,
+        "teacher_ids":  [
+
+                        ],
+        "customer_ids":  [
+                             3163
+                         ],
+        "group_ids":  [
+
+                      ],
+        "streaming":  false,
+        "note":  "",
+        "topic":  "",
+        "homework":  null,
+        "created_at":  "2026-09-09 07:34:20",
+        "updated_at":  "2026-09-14 12:39:49",
+        "regular_id":  null,
+        "details":  [
+                        {
+                            "id":  140651,
+                            "branch_id":  1,
+                            "customer_id":  3163,
+                            "lesson_id":  53029,
+                            "ctt_id":  null,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  null,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  null,
+                            "note":  null
+                        }
+                    ],
+        "custom_tema":  "",
+        "custom_uroka":  ""
+    },
+    {
+        "id":  25355,
+        "branch_id":  1,
+        "date":  "2026-09-14",
+        "time_from":  "2026-09-14 14:00:01",
+        "time_to":  "2026-09-14 14:50:00",
+        "lesson_type_id":  1,
+        "lesson_type_name":  "Индивидуальный",
+        "status":  2,
+        "subject_id":  20,
+        "room_id":  36,
+        "teacher_ids":  [
+                            27
+                        ],
+        "customer_ids":  [
+                             1872
+                         ],
+        "group_ids":  [
+
+                      ],
+        "streaming":  false,
+        "note":  "",
+        "topic":  "",
+        "homework":  null,
+        "created_at":  "2026-03-28 13:40:00",
+        "updated_at":  "2026-09-16 09:42:04",
+        "regular_id":  562,
+        "details":  [
+                        {
+                            "id":  82368,
+                            "branch_id":  1,
+                            "customer_id":  1872,
+                            "lesson_id":  25355,
+                            "ctt_id":  1107,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  null,
+                            "commission":  null,
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  null,
+                            "note":  null
+                        }
+                    ],
+        "custom_tema":  "",
+        "custom_uroka":  ""
+    }
+]

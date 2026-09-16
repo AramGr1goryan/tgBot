@@ -1,0 +1,2769 @@
+﻿{
+    "total":  186,
+    "count":  50,
+    "page":  0,
+    "items":  [
+                  {
+                      "id":  3436,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+                                          20
+                                      ],
+                      "name":  "G.N | Test",
+                      "gender":  1,
+                      "color":  null,
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  null,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  1,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "G.N | Test",
+                      "company_id":  null,
+                      "dob":  "02.02.2015",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  null,
+                      "paid_till":  null,
+                      "last_attend_date":  null,
+                      "b_date":  "2026-09-14 17:14:03",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-14 13:14:03",
+                      "created_at":  "2026-09-14 13:14:03",
+                      "phone":  [
+                                    "+374-77-844-402"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+
+                               ],
+                      "custom_adres":  "",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  1428,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Ааронян Андраник",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  2,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Гоар",
+                      "company_id":  null,
+                      "dob":  "31.12.2022",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-18 17:30:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-12",
+                      "b_date":  "2026-01-21 17:34:46",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-12 12:21:34",
+                      "created_at":  "2026-01-21 13:34:45",
+                      "phone":  [
+                                    "+374-77-771-223",
+                                    "+374-33-020-890"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Малатия"
+                               ],
+                      "custom_adres":  "Малатия Себастия",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/60756555",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/60754805"
+                  },
+                  {
+                      "id":  1201,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Аветисян Ален",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  8,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Marina Sargsyan",
+                      "company_id":  null,
+                      "dob":  "01.01.2014",
+                      "balance":  "11600.00",
+                      "balance_base":  "11600.00",
+                      "balance_bonus":  0,
+                      "paid_count":  3,
+                      "next_lesson_date":  "2026-09-17 16:00:01",
+                      "paid_till":  "2026-10-01 16:00:01",
+                      "last_attend_date":  "2026-09-10",
+                      "b_date":  "2025-12-18 19:10:23",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  3,
+                      "paid_lesson_date":  "2026-10-01 16:00:01",
+                      "updated_at":  "2026-09-10 15:33:06",
+                      "created_at":  "2025-12-18 15:10:23",
+                      "phone":  [
+                                    "+374-91-368-718"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "",
+                      "custom_source":  "fb",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/60542169",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/60484335"
+                  },
+                  {
+                      "id":  1126,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Аветисян Раффи",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  4,
+                      "assigned_id":  41,
+                      "legal_type":  1,
+                      "legal_name":  "Ани",
+                      "company_id":  null,
+                      "dob":  "01.01.2013",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-18 16:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-04",
+                      "b_date":  "2025-12-08 19:21:21",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-11 13:00:56",
+                      "created_at":  "2025-12-08 15:21:21",
+                      "phone":  [
+                                    "+374-44-160-202",
+                                    "+374-91-309-516"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  2313,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Аветисян Татев",
+                      "gender":  0,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  8,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Armen Avetisyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2020",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-19 12:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-08-15",
+                      "b_date":  "2026-05-08 18:16:24",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-12 08:58:29",
+                      "created_at":  "2026-05-08 14:16:24",
+                      "phone":  [
+                                    "+374-94-637-232",
+                                    "+374-94-634-097"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61445897",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61440903"
+                  },
+                  {
+                      "id":  2112,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+                                          22
+                                      ],
+                      "name":  "G.N | Азарян Ангел",
+                      "gender":  0,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  8,
+                      "lead_status_id":  null,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  9,
+                      "assigned_id":  37,
+                      "legal_type":  1,
+                      "legal_name":  "Наре Азарян",
+                      "company_id":  null,
+                      "dob":  "26.05.2023",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  null,
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-08-13",
+                      "b_date":  "2026-04-13 21:34:51",
+                      "e_date":  "2030-12-31",
+                      "note":  "Племянница Наре",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-10 09:01:07",
+                      "created_at":  "2026-04-13 17:34:51",
+                      "phone":  [
+                                    "+374-99-255-545",
+                                    "+374-98-588-199"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+
+                               ],
+                      "custom_adres":  "",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  1500,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Акобян Арам",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Аревик",
+                      "company_id":  null,
+                      "dob":  "31.12.2016",
+                      "balance":  "32000.00",
+                      "balance_base":  "32000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  11,
+                      "next_lesson_date":  "2026-09-18 16:30:01",
+                      "paid_till":  "2026-11-27 16:30:01",
+                      "last_attend_date":  "2026-09-11",
+                      "b_date":  "2026-02-04 16:16:58",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  11,
+                      "paid_lesson_date":  "2026-11-27 16:30:01",
+                      "updated_at":  "2026-09-11 13:01:12",
+                      "created_at":  "2026-02-04 12:16:58",
+                      "phone":  [
+                                    "+374-55-527-707"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/60850837",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/60850803"
+                  },
+                  {
+                      "id":  2623,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Акопян Артур",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Shamam karapetyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2017",
+                      "balance":  "32000.00",
+                      "balance_base":  "32000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  1,
+                      "next_lesson_date":  "2026-09-19 13:00:01",
+                      "paid_till":  "2026-09-19 13:00:01",
+                      "last_attend_date":  "2026-07-04",
+                      "b_date":  "2026-06-08 12:34:52",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  1,
+                      "paid_lesson_date":  "2026-09-19 13:00:01",
+                      "updated_at":  "2026-09-12 09:53:54",
+                      "created_at":  "2026-06-08 08:34:52",
+                      "phone":  [
+                                    "+374-91-131-797"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61837553",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61825859"
+                  },
+                  {
+                      "id":  1087,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Алексанян Левон",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  5,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Арус",
+                      "company_id":  null,
+                      "dob":  "20.12.2020",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-17 17:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-14",
+                      "b_date":  "2025-12-03 13:55:18",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-14 15:00:24",
+                      "created_at":  "2025-12-03 09:55:17",
+                      "phone":  [
+                                    "+374-95-811-708"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Бангладеш"
+                               ],
+                      "custom_adres":  "Бангладеш",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "WhatsApp",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/60441271",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/60441239"
+                  },
+                  {
+                      "id":  1356,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Андреасян Артур",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Robert",
+                      "company_id":  null,
+                      "dob":  "31.12.2015",
+                      "balance":  "33333.33",
+                      "balance_base":  "33333.33",
+                      "balance_bonus":  0,
+                      "paid_count":  10,
+                      "next_lesson_date":  "2026-09-19 11:00:01",
+                      "paid_till":  "2026-11-21 11:00:01",
+                      "last_attend_date":  "2026-09-12",
+                      "b_date":  "2026-01-13 15:07:36",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  10,
+                      "paid_lesson_date":  "2026-11-21 11:00:01",
+                      "updated_at":  "2026-09-12 08:56:23",
+                      "created_at":  "2026-01-13 11:07:36",
+                      "phone":  [
+                                    "+374-77-729-920",
+                                    "+374-91-905-455"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "Звонок",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/60704145",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/60704141"
+                  },
+                  {
+                      "id":  2772,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Антонян Артур",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  4,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Armen Maroyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2017",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  6,
+                      "next_lesson_date":  "2026-09-17 15:00:01",
+                      "paid_till":  "2026-10-05 17:00:01",
+                      "last_attend_date":  "2026-09-14",
+                      "b_date":  "2026-06-23 16:45:35",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  6,
+                      "paid_lesson_date":  "2026-10-05 17:00:01",
+                      "updated_at":  "2026-09-14 15:00:24",
+                      "created_at":  "2026-06-23 12:45:35",
+                      "phone":  [
+                                    "+374-99-809-041",
+                                    "+374-91-282-941"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "fb",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61980429",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61920157"
+                  },
+                  {
+                      "id":  2747,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Арашакян Арам",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  1,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  10,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Лилит",
+                      "company_id":  null,
+                      "dob":  "22.03.2017",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-21 16:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-14",
+                      "b_date":  "2026-06-18 12:40:42",
+                      "e_date":  "2030-12-31",
+                      "note":  "Подаренный абонимент",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-14 14:59:48",
+                      "created_at":  "2026-06-18 08:40:42",
+                      "phone":  [
+                                    "+374-93-244-522"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Харберд",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61922443",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61922433"
+                  },
+                  {
+                      "id":  1658,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Арутюнян Григор",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  8,
+                      "lead_status_id":  1,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  4,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Mary Mirijanyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2020",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  1,
+                      "next_lesson_date":  "2026-09-17 17:00:01",
+                      "paid_till":  "2026-09-17 17:00:01",
+                      "last_attend_date":  "2026-09-09",
+                      "b_date":  "2026-02-23 17:31:31",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  1,
+                      "paid_lesson_date":  "2026-09-17 17:00:01",
+                      "updated_at":  "2026-09-11 20:09:45",
+                      "created_at":  "2026-02-23 13:31:31",
+                      "phone":  [
+                                    "+374-98-777-702"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "",
+                      "custom_source":  "fb",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/60982083",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/60967643"
+                  },
+                  {
+                      "id":  2231,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Аршакян Аршак",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  2,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Тигрануи Агаджанян",
+                      "company_id":  null,
+                      "dob":  "31.12.2019",
+                      "balance":  "103111.11",
+                      "balance_base":  "103111.11",
+                      "balance_bonus":  0,
+                      "paid_count":  32,
+                      "next_lesson_date":  "2026-09-19 12:00:01",
+                      "paid_till":  "2027-04-24 12:00:01",
+                      "last_attend_date":  "2026-09-12",
+                      "b_date":  "2026-04-30 15:53:23",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  32,
+                      "paid_lesson_date":  "2027-04-24 12:00:01",
+                      "updated_at":  "2026-09-12 11:03:03",
+                      "created_at":  "2026-04-30 11:53:23",
+                      "phone":  [
+                                    "+374-95-302-665"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Кентрон"
+                               ],
+                      "custom_adres":  "Кентрон",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "ig",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61407071",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61402587"
+                  },
+                  {
+                      "id":  1903,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Ахабабян Давит",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  4,
+                      "assigned_id":  64,
+                      "legal_type":  1,
+                      "legal_name":  "Tatev Chteyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2021",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-17 18:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-15",
+                      "b_date":  "2026-03-21 16:08:52",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-15 15:30:32",
+                      "created_at":  "2026-03-21 12:08:51",
+                      "phone":  [
+                                    "+374-98-639-359"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Малатия"
+                               ],
+                      "custom_adres":  "Малатия",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "fb",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61206815",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61200223"
+                  },
+                  {
+                      "id":  1650,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Бабаян Артур",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  null,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  1,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Бабаян Артур",
+                      "company_id":  null,
+                      "dob":  "01.02.2020",
+                      "balance":  "4000.00",
+                      "balance_base":  "4000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-19 15:30:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-12",
+                      "b_date":  "2026-02-21 20:35:57",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-12 12:17:52",
+                      "created_at":  "2026-02-21 16:35:57",
+                      "phone":  [
+                                    "+374-96-002-444"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+
+                               ],
+                      "custom_adres":  "",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  3226,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Багдасарян Акоп",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Diana Nahapetyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2020",
+                      "balance":  "-25000.00",
+                      "balance_base":  "-25000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  -1,
+                      "next_lesson_date":  "2026-09-19 15:30:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-12",
+                      "b_date":  "2026-08-12 16:07:41",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  -1,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-12 12:21:34",
+                      "created_at":  "2026-08-12 12:07:41",
+                      "phone":  [
+                                    "+374-33-999-773"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/62309111",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/62304901"
+                  },
+                  {
+                      "id":  1470,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Бадасян Арег",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  5,
+                      "assigned_id":  41,
+                      "legal_type":  1,
+                      "legal_name":  "Анаит",
+                      "company_id":  null,
+                      "dob":  "01.01.2022",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-18 17:30:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-14",
+                      "b_date":  "2026-01-30 19:58:41",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-14 15:00:24",
+                      "created_at":  "2026-01-30 15:58:41",
+                      "phone":  [
+                                    "+374-91-811-998"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Малатия Себастия"
+                               ],
+                      "custom_adres":  "Малатия Себастия",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  2122,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Бареян Арен",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  7,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  64,
+                      "legal_type":  1,
+                      "legal_name":  "Лилит",
+                      "company_id":  null,
+                      "dob":  "31.12.2017",
+                      "balance":  "1.00",
+                      "balance_base":  "1.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-22 19:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-07-17",
+                      "b_date":  "2026-04-15 11:36:59",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-15 15:32:44",
+                      "created_at":  "2026-04-15 07:36:59",
+                      "phone":  [
+                                    "+374-41-521-415"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "",
+                      "custom_source":  "WhatsApp",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61328579",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61325781"
+                  },
+                  {
+                      "id":  2266,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Ваданян Ваагн",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Լիլիթ Հովհաննիսյան",
+                      "company_id":  null,
+                      "dob":  "31.12.2021",
+                      "balance":  "8000.00",
+                      "balance_base":  "8000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-19 12:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-12",
+                      "b_date":  "2026-05-04 15:42:39",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-12 10:58:43",
+                      "created_at":  "2026-05-04 11:42:39",
+                      "phone":  [
+                                    "+374-94-516-321"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61422005",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61416191"
+                  },
+                  {
+                      "id":  2737,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Варданян Артур",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  null,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  4,
+                      "assigned_id":  41,
+                      "legal_type":  1,
+                      "legal_name":  "Нуне Варданяан",
+                      "company_id":  null,
+                      "dob":  "21.09.2021",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  1,
+                      "next_lesson_date":  "2026-09-17 14:00:01",
+                      "paid_till":  "2026-09-17 14:00:01",
+                      "last_attend_date":  "2026-09-10",
+                      "b_date":  "2026-06-16 13:28:10",
+                      "e_date":  "2030-12-31",
+                      "note":  "Русахос",
+                      "paid_lesson_count":  1,
+                      "paid_lesson_date":  "2026-09-17 14:00:01",
+                      "updated_at":  "2026-09-10 12:16:00",
+                      "created_at":  "2026-06-16 09:28:10",
+                      "phone":  [
+                                    "+374-94-305-078"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  1530,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Варданян Феликс",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Армине",
+                      "company_id":  null,
+                      "dob":  "01.04.2020",
+                      "balance":  "1.00",
+                      "balance_base":  "1.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-18 15:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-16",
+                      "b_date":  "2026-02-09 13:11:11",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-16 13:15:25",
+                      "created_at":  "2026-02-09 09:11:11",
+                      "phone":  [
+                                    "+374-44-160-750"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "Зашли",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/60880955",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/60880953"
+                  },
+                  {
+                      "id":  1885,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Габриелян Даниель",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  9,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  2,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Лусине",
+                      "company_id":  null,
+                      "dob":  "31.12.2020",
+                      "balance":  "3250.00",
+                      "balance_base":  "3250.00",
+                      "balance_bonus":  0,
+                      "paid_count":  3,
+                      "next_lesson_date":  "2026-09-21 18:30:01",
+                      "paid_till":  "2026-10-05 18:30:01",
+                      "last_attend_date":  "2026-09-16",
+                      "b_date":  "2026-03-20 15:52:35",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  3,
+                      "paid_lesson_date":  "2026-10-05 18:30:01",
+                      "updated_at":  "2026-09-16 18:27:52",
+                      "created_at":  "2026-03-20 11:52:35",
+                      "phone":  [
+                                    "+374-44-222-218",
+                                    "+374-98-371-188"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "",
+                      "custom_source":  "Рекамендация",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61203393",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61203391"
+                  },
+                  {
+                      "id":  3174,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Гавалджян Мгер",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Քրիստինե Բագրատյան",
+                      "company_id":  null,
+                      "dob":  "01.01.2021",
+                      "balance":  "77777.78",
+                      "balance_base":  "77777.78",
+                      "balance_bonus":  0,
+                      "paid_count":  34,
+                      "next_lesson_date":  "2026-09-23 16:30:01",
+                      "paid_till":  "2027-05-12 16:30:01",
+                      "last_attend_date":  "2026-09-16",
+                      "b_date":  "2026-07-30 16:26:29",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  34,
+                      "paid_lesson_date":  "2027-05-12 16:30:01",
+                      "updated_at":  "2026-09-16 18:27:17",
+                      "created_at":  "2026-07-30 12:26:29",
+                      "phone":  [
+                                    "+374-95-705-001"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/62226865",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/62226599"
+                  },
+                  {
+                      "id":  3230,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Гавалджян Монте",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  null,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Քրիստինե Բագրատյան",
+                      "company_id":  null,
+                      "dob":  "01.01.2019",
+                      "balance":  "97222.22",
+                      "balance_base":  "97222.22",
+                      "balance_bonus":  0,
+                      "paid_count":  29,
+                      "next_lesson_date":  "2026-09-23 16:30:01",
+                      "paid_till":  "2027-04-07 16:30:01",
+                      "last_attend_date":  "2026-09-16",
+                      "b_date":  "2026-08-13 14:11:41",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  29,
+                      "paid_lesson_date":  "2027-04-07 16:30:01",
+                      "updated_at":  "2026-09-16 18:27:17",
+                      "created_at":  "2026-08-13 10:11:41",
+                      "phone":  [
+                                    "+374-95-705-001"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/62226599"
+                  },
+                  {
+                      "id":  1944,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Галстян Акоб",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  9,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  13,
+                      "assigned_id":  41,
+                      "legal_type":  1,
+                      "legal_name":  "Рипсиме",
+                      "company_id":  null,
+                      "dob":  "24.01.2020",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-19 13:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-12",
+                      "b_date":  "2026-03-24 17:29:31",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-12 11:04:02",
+                      "created_at":  "2026-03-24 13:29:31",
+                      "phone":  [
+                                    "+374-55-390-009"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "",
+                      "custom_privacy":  "Нет",
+                      "custom_source":  "Расклейка",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  1188,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Гаспарян Георги",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  9,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  2,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Satik",
+                      "company_id":  null,
+                      "dob":  "31.12.2020",
+                      "balance":  "60000.00",
+                      "balance_base":  "60000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  24,
+                      "next_lesson_date":  "2026-09-21 18:30:01",
+                      "paid_till":  "2026-12-09 18:30:01",
+                      "last_attend_date":  "2026-09-16",
+                      "b_date":  "2025-12-16 17:38:41",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  24,
+                      "paid_lesson_date":  "2026-12-09 18:30:01",
+                      "updated_at":  "2026-09-16 18:28:47",
+                      "created_at":  "2025-12-16 13:38:41",
+                      "phone":  [
+                                    "+374-55-555-965"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/60526543",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/60524671"
+                  },
+                  {
+                      "id":  883,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Геворгян Левон",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  17,
+                      "assigned_id":  43,
+                      "legal_type":  1,
+                      "legal_name":  "Света",
+                      "company_id":  null,
+                      "dob":  "01.01.2021",
+                      "balance":  "13125.00",
+                      "balance_base":  "13125.00",
+                      "balance_bonus":  0,
+                      "paid_count":  1,
+                      "next_lesson_date":  "2026-09-19 14:00:01",
+                      "paid_till":  "2026-09-19 14:00:01",
+                      "last_attend_date":  "2026-09-14",
+                      "b_date":  "2025-11-01 15:09:37",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  1,
+                      "paid_lesson_date":  "2026-09-19 14:00:01",
+                      "updated_at":  "2026-09-16 09:17:03",
+                      "created_at":  "2025-11-01 11:09:37",
+                      "phone":  [
+                                    "+374-98-701-737"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "шенгавит",
+                      "custom_privacy":  "",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/leads/detail/39310023?after_add=yes\u0026reload=yes",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/leads/detail/39310023?after_add=yes\u0026reload=yes"
+                  },
+                  {
+                      "id":  874,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Греян Даниэль",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  14,
+                      "assigned_id":  43,
+                      "legal_type":  1,
+                      "legal_name":  "Кнарик Гулян",
+                      "company_id":  null,
+                      "dob":  "13.12.2016",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-18 15:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-16",
+                      "b_date":  "2025-11-01 12:37:15",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-16 13:15:25",
+                      "created_at":  "2025-11-01 08:37:15",
+                      "phone":  [
+                                    "+374-94-183-822"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Арташатское шоссе, 129/1."
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  2942,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Григорян Аик",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Mane",
+                      "company_id":  null,
+                      "dob":  "31.12.2016",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  4,
+                      "next_lesson_date":  "2026-09-23 16:30:01",
+                      "paid_till":  "2026-10-14 16:30:01",
+                      "last_attend_date":  "2026-09-16",
+                      "b_date":  "2026-07-03 17:31:35",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  4,
+                      "paid_lesson_date":  "2026-10-14 16:30:01",
+                      "updated_at":  "2026-09-16 13:15:50",
+                      "created_at":  "2026-07-03 13:31:35",
+                      "phone":  [
+                                    "+374-95-624-833"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/62037009",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/62033261"
+                  },
+                  {
+                      "id":  1797,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Григорян Анри",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  9,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  4,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Andranik Grigoryan",
+                      "company_id":  null,
+                      "dob":  "31.12.2019",
+                      "balance":  "16000.00",
+                      "balance_base":  "16000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  7,
+                      "next_lesson_date":  "2026-09-19 12:00:01",
+                      "paid_till":  "2026-10-31 12:00:01",
+                      "last_attend_date":  "2026-09-12",
+                      "b_date":  "2026-03-11 19:22:46",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  7,
+                      "paid_lesson_date":  "2026-10-31 12:00:01",
+                      "updated_at":  "2026-09-12 08:58:51",
+                      "created_at":  "2026-03-11 15:22:46",
+                      "phone":  [
+                                    "+374-99-744-088"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "fb",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61159013",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61157253"
+                  },
+                  {
+                      "id":  2242,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Григорян Марк",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Силви",
+                      "company_id":  null,
+                      "dob":  "31.12.2019",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-23 17:30:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-08-26",
+                      "b_date":  "2026-05-01 15:25:24",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-16 18:27:52",
+                      "created_at":  "2026-05-01 11:25:23",
+                      "phone":  [
+                                    "+374-96-555-472"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61410711",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61410691"
+                  },
+                  {
+                      "id":  2435,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Григорян Ричард",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  64,
+                      "legal_type":  1,
+                      "legal_name":  "Naira Gevorgyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2021",
+                      "balance":  "50001.00",
+                      "balance_base":  "50001.00",
+                      "balance_bonus":  0,
+                      "paid_count":  13,
+                      "next_lesson_date":  "2026-09-17 18:00:01",
+                      "paid_till":  "2026-12-17 18:00:01",
+                      "last_attend_date":  "2026-09-15",
+                      "b_date":  "2026-05-21 17:28:37",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  13,
+                      "paid_lesson_date":  "2026-12-17 18:00:01",
+                      "updated_at":  "2026-09-15 15:30:09",
+                      "created_at":  "2026-05-21 13:28:37",
+                      "phone":  [
+                                    "+374-41-773-701"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61576997",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61573971"
+                  },
+                  {
+                      "id":  1793,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Давтян Гаспар",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  9,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  13,
+                      "assigned_id":  64,
+                      "legal_type":  1,
+                      "legal_name":  "Алиса",
+                      "company_id":  null,
+                      "dob":  "31.12.2017",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  1,
+                      "next_lesson_date":  "2026-09-19 16:30:01",
+                      "paid_till":  "2026-09-19 16:30:01",
+                      "last_attend_date":  "2026-09-15",
+                      "b_date":  "2026-03-11 14:50:32",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  1,
+                      "paid_lesson_date":  "2026-09-19 16:30:01",
+                      "updated_at":  "2026-09-15 15:31:36",
+                      "created_at":  "2026-03-11 10:50:32",
+                      "phone":  [
+                                    "+374-98-056-162"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "Расклейка",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61157825",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61157819"
+                  },
+                  {
+                      "id":  1170,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+                                          22
+                                      ],
+                      "name":  "G.N | Давтян Давид",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  10,
+                      "assigned_id":  54,
+                      "legal_type":  1,
+                      "legal_name":  "Аревик",
+                      "company_id":  null,
+                      "dob":  "09.11.2021",
+                      "balance":  "-20631.50",
+                      "balance_base":  "-20631.50",
+                      "balance_bonus":  0,
+                      "paid_count":  -1,
+                      "next_lesson_date":  "2026-09-17 18:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-10",
+                      "b_date":  "2025-12-15 15:01:53",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  -1,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-15 15:31:36",
+                      "created_at":  "2025-12-15 11:01:53",
+                      "phone":  [
+                                    "+374-98-573-911",
+                                    "+374-77-141-424"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Манташян"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  2889,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Даллакян Емануел",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Gayane Baghdasari Grigoryan",
+                      "company_id":  null,
+                      "dob":  "31.12.2020",
+                      "balance":  "16000.00",
+                      "balance_base":  "16000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  6,
+                      "next_lesson_date":  "2026-09-19 12:00:01",
+                      "paid_till":  "2026-10-24 12:00:01",
+                      "last_attend_date":  "2026-09-05",
+                      "b_date":  "2026-06-27 17:03:06",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  6,
+                      "paid_lesson_date":  "2026-10-24 12:00:01",
+                      "updated_at":  "2026-09-12 08:58:51",
+                      "created_at":  "2026-06-27 13:03:06",
+                      "phone":  [
+                                    "+374-93-634-329"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/62004449",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61988723"
+                  },
+                  {
+                      "id":  2967,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Дарбинян Вае",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  8,
+                      "lead_status_id":  1,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Siran Markosyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2021",
+                      "balance":  "16000.00",
+                      "balance_base":  "16000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  5,
+                      "next_lesson_date":  "2026-09-19 12:00:01",
+                      "paid_till":  "2026-10-17 12:00:01",
+                      "last_attend_date":  "2026-08-29",
+                      "b_date":  "2026-07-06 17:48:25",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  5,
+                      "paid_lesson_date":  "2026-10-17 12:00:01",
+                      "updated_at":  "2026-09-12 20:10:11",
+                      "created_at":  "2026-07-06 13:48:25",
+                      "phone":  [
+                                    "+374-77-800-240"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/62053003",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/62049353"
+                  },
+                  {
+                      "id":  1716,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Довлатян Ваграм",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  7,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  4,
+                      "assigned_id":  41,
+                      "legal_type":  1,
+                      "legal_name":  "Довлатян Ваграм",
+                      "company_id":  null,
+                      "dob":  "01.01.2021",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  null,
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-06-09",
+                      "b_date":  "2026-03-02 18:15:22",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-01 20:11:14",
+                      "created_at":  "2026-03-02 14:15:22",
+                      "phone":  [
+                                    "+374-55-688-848",
+                                    "+374-95-701-709"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Малатия Себастия",
+                      "custom_privacy":  "",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  2025,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Исаханян Генри",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Arman Isakhanyan",
+                      "company_id":  null,
+                      "dob":  "11.11.2018",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  null,
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-07-25",
+                      "b_date":  "2026-04-01 17:45:43",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-08-06 18:30:23",
+                      "created_at":  "2026-04-01 13:45:43",
+                      "phone":  [
+                                    "+374-93-218-811",
+                                    "+374-99-886-680"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Малатия Себастия"
+                               ],
+                      "custom_adres":  "Малатия Себастия",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "ig",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61258807",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61255275"
+                  },
+                  {
+                      "id":  2106,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Исраелян Алекс Карен",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  null,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  64,
+                      "legal_type":  1,
+                      "legal_name":  "Исраелян АлексКарен",
+                      "company_id":  null,
+                      "dob":  "01.01.2021",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  null,
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-02",
+                      "b_date":  "2026-04-13 18:01:26",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-02 14:30:40",
+                      "created_at":  "2026-04-13 14:01:26",
+                      "phone":  [
+                                    "+374-94-796-414"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/leads/detail/40567545"
+                  },
+                  {
+                      "id":  852,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Карапетян Нарек",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  7,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  13,
+                      "assigned_id":  39,
+                      "legal_type":  1,
+                      "legal_name":  "Арусик",
+                      "company_id":  null,
+                      "dob":  "01.01.2020",
+                      "balance":  "-10500.00",
+                      "balance_base":  "-10500.00",
+                      "balance_bonus":  0,
+                      "paid_count":  -1,
+                      "next_lesson_date":  null,
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-07",
+                      "b_date":  "2025-10-30 14:04:37",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  -1,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-09 10:33:27",
+                      "created_at":  "2025-10-30 10:04:37",
+                      "phone":  [
+                                    "+374-98-832-788"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  1967,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Кивирян Арег",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  8,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  2,
+                      "assigned_id":  64,
+                      "legal_type":  1,
+                      "legal_name":  "Lusine Sahakyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2014",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-23 16:30:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-02",
+                      "b_date":  "2026-03-27 17:43:40",
+                      "e_date":  "2030-12-31",
+                      "note":  "ерехаин чнкарел",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-16 20:09:34",
+                      "created_at":  "2026-03-27 13:43:40",
+                      "phone":  [
+                                    "+374-93-433-556"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Кентрон"
+                               ],
+                      "custom_adres":  "кентрон",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61234875",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61232357"
+                  },
+                  {
+                      "id":  1218,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Мадатян Артур",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  7,
+                      "lead_status_id":  9,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  4,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Арам Мадатян",
+                      "company_id":  null,
+                      "dob":  "31.12.2018",
+                      "balance":  "10000.00",
+                      "balance_base":  "10000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  null,
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-06-23",
+                      "b_date":  "2025-12-19 17:55:19",
+                      "e_date":  "2030-12-31",
+                      "note":  "бжишки ереха (вирабуж)",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-08-30 13:39:25",
+                      "created_at":  "2025-12-19 13:55:19",
+                      "phone":  [
+                                    "+374-93-034-030",
+                                    "+374-94-800-933"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/60547335",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/60498589"
+                  },
+                  {
+                      "id":  2994,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Мартиросян Марк",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Давид Мартиросян",
+                      "company_id":  null,
+                      "dob":  "31.12.2020",
+                      "balance":  "16000.00",
+                      "balance_base":  "16000.00",
+                      "balance_bonus":  0,
+                      "paid_count":  5,
+                      "next_lesson_date":  "2026-09-17 17:00:01",
+                      "paid_till":  "2026-10-15 17:00:01",
+                      "last_attend_date":  "2026-09-10",
+                      "b_date":  "2026-07-08 11:31:18",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  5,
+                      "paid_lesson_date":  "2026-10-15 17:00:01",
+                      "updated_at":  "2026-09-10 13:29:11",
+                      "created_at":  "2026-07-08 07:31:18",
+                      "phone":  [
+                                    "+374-98-881-894"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/62063665",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/62062873"
+                  },
+                  {
+                      "id":  2837,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Мелик Тангян Раффи",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  4,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Արթուր Մելիք-Թանգյան",
+                      "company_id":  null,
+                      "dob":  "31.12.2017",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  2,
+                      "next_lesson_date":  "2026-09-18 16:30:01",
+                      "paid_till":  "2026-09-25 16:30:01",
+                      "last_attend_date":  "2026-09-04",
+                      "b_date":  "2026-06-25 19:33:15",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  2,
+                      "paid_lesson_date":  "2026-09-25 16:30:01",
+                      "updated_at":  "2026-09-11 13:01:12",
+                      "created_at":  "2026-06-25 15:33:15",
+                      "phone":  [
+                                    "+374-95-155-122"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61994389",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61943255"
+                  },
+                  {
+                      "id":  842,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Мелконян Самвел",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  9,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  13,
+                      "assigned_id":  39,
+                      "legal_type":  1,
+                      "legal_name":  "мама",
+                      "company_id":  null,
+                      "dob":  "01.01.2019",
+                      "balance":  "37500.00",
+                      "balance_base":  "37500.00",
+                      "balance_bonus":  0,
+                      "paid_count":  9,
+                      "next_lesson_date":  "2026-09-18 15:00:01",
+                      "paid_till":  "2026-10-16 15:00:01",
+                      "last_attend_date":  "2026-09-16",
+                      "b_date":  "2025-10-28 14:13:30",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  9,
+                      "paid_lesson_date":  "2026-10-16 15:00:01",
+                      "updated_at":  "2026-09-16 13:15:25",
+                      "created_at":  "2025-10-28 10:13:30",
+                      "phone":  [
+                                    "+374-77-944-977"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  3012,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Мелкумян Алберт",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  6,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  64,
+                      "legal_type":  1,
+                      "legal_name":  "Мелкумян Алберт",
+                      "company_id":  null,
+                      "dob":  "01.01.2021",
+                      "balance":  "28667.00",
+                      "balance_base":  "28667.00",
+                      "balance_bonus":  0,
+                      "paid_count":  6,
+                      "next_lesson_date":  "2026-09-17 18:00:01",
+                      "paid_till":  "2026-10-06 18:00:01",
+                      "last_attend_date":  "2026-08-07",
+                      "b_date":  "2026-07-08 19:34:31",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  6,
+                      "paid_lesson_date":  "2026-10-06 18:00:01",
+                      "updated_at":  "2026-09-15 15:31:36",
+                      "created_at":  "2026-07-08 15:34:31",
+                      "phone":  [
+                                    "+374-93-316-164"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  3214,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Месропян Ахван",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Anahit Gevorgyan",
+                      "company_id":  null,
+                      "dob":  "31.12.2020",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  1,
+                      "next_lesson_date":  "2026-09-19 15:30:01",
+                      "paid_till":  "2026-09-19 15:30:01",
+                      "last_attend_date":  "2026-09-05",
+                      "b_date":  "2026-08-10 17:10:06",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  1,
+                      "paid_lesson_date":  "2026-09-19 15:30:01",
+                      "updated_at":  "2026-09-14 13:36:36",
+                      "created_at":  "2026-08-10 13:10:06",
+                      "phone":  [
+                                    "+374-93-322-133"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/62296939",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/62292131"
+                  },
+                  {
+                      "id":  1754,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Мирзоян Самвел",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  3,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  13,
+                      "assigned_id":  41,
+                      "legal_type":  1,
+                      "legal_name":  "Мариам",
+                      "company_id":  null,
+                      "dob":  "16.01.2019",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  2,
+                      "next_lesson_date":  "2026-09-22 17:00:01",
+                      "paid_till":  "2026-09-29 17:00:01",
+                      "last_attend_date":  "2026-09-15",
+                      "b_date":  "2026-03-06 18:42:51",
+                      "e_date":  "2030-12-31",
+                      "note":  "",
+                      "paid_lesson_count":  2,
+                      "paid_lesson_date":  "2026-09-29 17:00:01",
+                      "updated_at":  "2026-09-15 15:27:38",
+                      "created_at":  "2026-03-06 14:42:51",
+                      "phone":  [
+                                    "+374-55-224-417",
+                                    "+374-94-252-303"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "",
+                      "custom_privacy":  "Да",
+                      "custom_source":  "Расклейка",
+                      "custom_url_amo_client":  "",
+                      "custom_url_amo_parent":  ""
+                  },
+                  {
+                      "id":  1768,
+                      "branch_ids":  [
+                                         1
+                                     ],
+                      "teacher_ids":  [
+
+                                      ],
+                      "name":  "G.N | Мкртчян Арташес",
+                      "gender":  1,
+                      "color":  "#3C578C",
+                      "is_study":  1,
+                      "study_status_id":  1,
+                      "lead_status_id":  2,
+                      "pipeline_id":  1,
+                      "lead_reject_id":  null,
+                      "customer_reject_id":  null,
+                      "lead_source_id":  12,
+                      "assigned_id":  null,
+                      "legal_type":  1,
+                      "legal_name":  "Арпине",
+                      "company_id":  null,
+                      "dob":  "31.12.2017",
+                      "balance":  "0.00",
+                      "balance_base":  "0.00",
+                      "balance_bonus":  0,
+                      "paid_count":  0,
+                      "next_lesson_date":  "2026-09-16 13:00:01",
+                      "paid_till":  null,
+                      "last_attend_date":  "2026-09-02",
+                      "b_date":  "2026-03-09 17:34:42",
+                      "e_date":  "2030-12-31",
+                      "note":  "Նշել, եմ, որ եթե բարդը ստացվի, կսկսենք հենց կոդիից, եթե չէ, ապա լեգո",
+                      "paid_lesson_count":  0,
+                      "paid_lesson_date":  null,
+                      "updated_at":  "2026-09-09 11:51:23",
+                      "created_at":  "2026-03-09 13:34:42",
+                      "phone":  [
+                                    "+374-77-125-414"
+                                ],
+                      "email":  [
+
+                                ],
+                      "web":  [
+
+                              ],
+                      "addr":  [
+                                   "Шенгавит"
+                               ],
+                      "custom_adres":  "Шенгавит",
+                      "custom_privacy":  "",
+                      "custom_source":  "ig",
+                      "custom_url_amo_client":  "https://makerobix.amocrm.ru/contacts/detail/61147933",
+                      "custom_url_amo_parent":  "https://makerobix.amocrm.ru/contacts/detail/61146927"
+                  }
+              ]
+}
