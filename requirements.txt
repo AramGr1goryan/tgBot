@@ -1,0 +1,4 @@
+aiogram>=3.0.0
+transliterate>=1.10.0
+fastapi>=0.100.0
+uvicorn>=0.20.0
