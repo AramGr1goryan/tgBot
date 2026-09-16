@@ -525,7 +525,10 @@ TEACHERS_MAP = {
     1037044744: {"id": 12, "name": "Լիա Ավետիսյան"}
 }
 
-async def check_uncompleted_lessons(bot: Bot):
+async def check_uncompleted_lessons(bot: Bot, exclude_ids=None):
+    if exclude_ids is None:
+        exclude_ids = []
+        
     token = await get_alfacrm_token()
     if not token:
         return {"status": "error", "message": "No CRM token"}
@@ -542,6 +545,9 @@ async def check_uncompleted_lessons(bot: Bot):
     messages_sent = 0
     async with httpx.AsyncClient() as client:
         for tg_id, teacher_info in TEACHERS_MAP.items():
+            if tg_id in exclude_ids:
+                continue
+                
             teacher_id = teacher_info["id"]
             try:
                 response = await client.post(
@@ -574,7 +580,7 @@ async def cmd_testteacher(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
     await message.answer("🔄 Սկսում եմ չնշված դասերի ստուգումը...")
-    result = await check_uncompleted_lessons(bot)
+    result = await check_uncompleted_lessons(bot, exclude_ids=[1037044744])
     await message.answer(f"✅ Ստուգումն ավարտվեց:\nՈւղարկված նամակներ՝ {result.get('reminders_sent', 0)}")
 
 @dp.message(Command("myschedule"))
