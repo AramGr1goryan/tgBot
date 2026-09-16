@@ -562,9 +562,20 @@ async def check_uncompleted_lessons(bot: Bot, exclude_ids=None, override_ids=Non
                     items = response.json().get("items", [])
                     if items:
                         count = len(items)
+                        
+                        items.sort(key=lambda x: x.get("time_from", ""))
+                        times = []
+                        for item in items:
+                            t_from = item.get("time_from", "")[-8:-3]
+                            t_to = item.get("time_to", "")[-8:-3]
+                            if t_from and t_to:
+                                times.append(f"• {t_from} - {t_to}")
+                        times_str = "\n".join(times)
+                        
                         text = (
                             f"🔔 **Ուշադրություն**\n\n"
                             f"Հարգելի {teacher_info['name']}, դուք ունեք **{count}** չնշված (պլանավորված) դաս այսօր ({today_str}):\n\n"
+                            f"**Ժամերը:**\n{times_str}\n\n"
                             f"Խնդրում ենք մուտք գործել CRM և նշել դասերը որպես անցկացված:"
                         )
                         try:
