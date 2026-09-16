@@ -389,7 +389,6 @@ async def cmd_proball(message: types.Message):
 
 @dp.message(Command("getweek"))
 async def cmd_getweek(message: types.Message):
-    if message.from_user.id != ADMIN_ID: return
     
     await message.answer("🔄 Կապ եմ հաստատում Alfa CRM-ի հետ...")
     booked_slots = await fetch_probation_lessons()
@@ -524,7 +523,6 @@ async def fetch_probation_details():
 
 @dp.message(Command("getprob"))
 async def cmd_getprob(message: types.Message):
-    if message.from_user.id != ADMIN_ID: return
     
     await message.answer("🔄 Բեռնում եմ այս շաբաթվա գրանցվածները...")
     
@@ -584,7 +582,6 @@ async def cmd_getprob(message: types.Message):
         await message.answer(text, parse_mode="HTML", disable_web_page_preview=True)
 @dp.message(Command("freeprob"))
 async def cmd_freeprob(message: types.Message):
-    if message.from_user.id != ADMIN_ID: return
     
     await message.answer("🔄 Հաշվարկում եմ ազատ տեղերը...")
     booked_slots = await fetch_probation_lessons()
@@ -664,9 +661,6 @@ async def cmd_freeprob(message: types.Message):
 
 @dp.message(Command("addtask"))
 async def cmd_addtask(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("Դուք չունեք առաջադրանքներ ավելացնելու իրավունք:")
-        return
         
     task_description = message.text.replace("/addtask", "", 1).strip()
     if not task_description:
@@ -847,8 +841,6 @@ async def process_html_upload(message: types.Message):
 
 @dp.message(Command("lego"))
 async def cmd_lego(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        return
     
     group_query = message.text.replace("/lego", "", 1).strip()
     if not group_query:
@@ -891,8 +883,6 @@ def is_theme_reply(message: types.Message) -> bool:
 
 @dp.message(is_theme_reply)
 async def process_theme_selection(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        return
         
     original_text = message.reply_to_message.text
     first_line = original_text.split('\n')[0]
