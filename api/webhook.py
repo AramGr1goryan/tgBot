@@ -29,6 +29,7 @@ PAYMENT_METHODS = {
 db_initialized = False
 BANNED_USERS = set()
 EXECUTORS = {}
+KNOWN_USERS = set()
 
 async def ensure_db():
     global db_initialized, BANNED_USERS
@@ -51,6 +52,10 @@ async def ensure_db():
     await conn.execute('''CREATE TABLE IF NOT EXISTS executors
                  (user_id BIGINT PRIMARY KEY, name TEXT)''')
                  
+    # Таблица для абсолютно всех пользователей, кто хоть раз написал боту
+    await conn.execute('''CREATE TABLE IF NOT EXISTS all_users
+                 (user_id BIGINT PRIMARY KEY, username TEXT, full_name TEXT)''')
+                 
     # Загружаем забаненных пользователей в память при холодном старте
     rows = await conn.fetch("SELECT user_id FROM banned_users")
     BANNED_USERS = {row['user_id'] for row in rows}
@@ -59,6 +64,11 @@ async def ensure_db():
     exec_rows = await conn.fetch("SELECT user_id, name FROM executors")
     for row in exec_rows:
         EXECUTORS[row['user_id']] = row['name']
+        
+    # Загружаем всех пользователей, чтобы не делать лишних инсертов
+    known_rows = await conn.fetch("SELECT user_id FROM all_users")
+    for row in known_rows:
+        KNOWN_USERS.add(row['user_id'])
     
     await conn.close()
     db_initialized = True
@@ -268,16 +278,22 @@ async def cmd_getusers(message: types.Message):
         
     await ensure_db()
     conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
-    rows = await conn.fetch("SELECT user_id, name FROM executors ORDER BY name")
+    rows = await conn.fetch("SELECT user_id, username, full_name FROM all_users ORDER BY full_name")
     await conn.close()
     
     if not rows:
-        await message.answer("Ակտիվ օգտատերեր չկան (ոչ ոք դեռ չի գրանցվել):")
+        await message.answer("Ակտիվ օգտատերեր չկան (ոչ ոք դեռ չի գրել բոտին):")
         return
         
-    response = "Գրանցված օգտատերեր (Անուն - ID)՝\n\n"
+    response = "Բոլոր օգտատերերը (Անուն - ID)՝\n\n"
     for row in rows:
-        response += f"{row['name']} - {row['user_id']}\n"
+        user_display = row['full_name']
+        if row['username']:
+            user_display += f" (@{row['username']})"
+        response += f"{user_display} - {row['user_id']}\n"
+        
+    if len(response) > 4000:
+        response = response[:4000] + "...\n[Ցանկը շատ երկար է]"
         
     await message.answer(response)
 
@@ -472,19 +488,35 @@ async def webhook(request: Request):
         print(f"Update received: {update_data.get('update_id')}")
         update = types.Update(**update_data)
         
-        # Инициализируем базу данных и загружаем забаненных пользователей
+        # Инициализируем базу данных и загружаем кэш
         await ensure_db()
         
-        # Проверяем, не забанен ли пользователь (игнорируем апдейт, если да)
+        # Проверяем пользователя и сохраняем его, если он новый
         user_id = None
+        user_obj = None
         if update.message and update.message.from_user:
             user_id = update.message.from_user.id
+            user_obj = update.message.from_user
         elif update.callback_query and update.callback_query.from_user:
             user_id = update.callback_query.from_user.id
+            user_obj = update.callback_query.from_user
             
-        if user_id and user_id in BANNED_USERS:
-            print(f"Ignored update from banned user {user_id}")
-            return {"status": "ok"}
+        if user_id:
+            if user_id in BANNED_USERS:
+                print(f"Ignored update from banned user {user_id}")
+                return {"status": "ok"}
+                
+            if user_id not in KNOWN_USERS:
+                username = user_obj.username or ""
+                full_name = user_obj.full_name or ""
+                
+                conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+                await conn.execute(
+                    "INSERT INTO all_users (user_id, username, full_name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+                    user_id, username, full_name
+                )
+                await conn.close()
+                KNOWN_USERS.add(user_id)
         
         import asyncio
         print("Starting dp.feed_update")
