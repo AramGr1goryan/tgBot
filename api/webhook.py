@@ -87,12 +87,19 @@ async def cmd_getid(message: types.Message):
 async def cmd_help(message: types.Message):
     await message.answer(
         "Ինչպես ճիշտ գրել հաղորդագրությունները՝\n\n"
-        "Ձևաչափ՝ Անուն Ազգանուն Գումար Եղանակ\n\n"
+        "Վճարումներ՝\n"
+        "Ձևաչափ՝ Անուն Ազգանուն Գումար Եղանակ\n"
         "Օրինակ՝ Aram Grigoryan 50000 N\n\n"
         "Հասանելի վճարման եղանակներ՝\n"
         "N — Կանխիկ\n"
         "b.n — Տերմինալով\n"
-        "c — Քարտով"
+        "c — Քարտով\n\n"
+        "Առաջադրանքների կառավարում՝\n"
+        "/addtask [տեքստ] - Ավելացնել առաջադրանք\n"
+        "/checktasks - Տեսնել առաջադրանքները\n"
+        "/task[համար] - Նշել որպես կատարված (օրինակ՝ /task1)\n\n"
+        "Lego թեմաներ՝\n"
+        "/lego [խումբ] - Ընտրել թեմա (օրինակ՝ /lego Spider man)"
     )
 
 @dp.message(Command("addtask"))
@@ -151,6 +158,10 @@ async def cmd_complete_task(message: types.Message):
         await bot.send_message(ADMIN_ID, f"Ադմինիստրատոր {user_info} կատարեց առաջադրանքը:\nTask{task_id} - {task_desc}")
     else:
         await message.answer("Առաջադրանքը չի գտնվել:")
+
+@dp.message(Command("task"))
+async def cmd_task_hint(message: types.Message):
+    await message.answer("Խնդրում ենք նշել առաջադրանքի համարը, օրինակ՝ /task1")
 
 # Загрузка HTML файла с темами Lego
 @dp.message(F.document)
