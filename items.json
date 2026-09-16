@@ -1,0 +1,17 @@
+﻿[
+    {
+        "id":  1,
+        "name":  "Курсы",
+        "category":  null
+    },
+    {
+        "id":  3,
+        "name":  "Пробный урок",
+        "category":  null
+    },
+    {
+        "id":  2,
+        "name":  "Продажи",
+        "category":  null
+    }
+]
