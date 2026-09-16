@@ -114,13 +114,13 @@ async def cmd_checktasks(message: types.Message):
         response += f"Task{task['id']} - {task['description']}\n"
     await message.answer(response)
 
-@dp.message(F.text.regexp(r'^(?i)/task(\d+)$'))
+@dp.message(F.text.regexp(r'^/[Tt][Aa][Ss][Kk](\d+)$'))
 async def cmd_complete_task(message: types.Message):
     if not POSTGRES_URL:
         await message.answer("Բազան միացված չէ (POSTGRES_URL is missing):")
         return
 
-    match = re.match(r'(?i)^/task(\d+)$', message.text)
+    match = re.match(r'^/task(\d+)$', message.text, re.IGNORECASE)
     if not match:
         return
     task_id = int(match.group(1))
