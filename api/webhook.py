@@ -110,6 +110,7 @@ async def get_alfacrm_token():
         return _alfacrm_token
 
 def _parse_lessons(items, tz):
+    now = datetime.now(tz)
     booked_slots = []
     for item in items:
         r_id = item.get("room_id")
@@ -134,10 +135,14 @@ def _parse_lessons(items, tz):
             continue
             
         date_str = item.get("date")
-        dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=tz)
-        weekday = dt.weekday()
-        
         time_from = item.get("time_from")
+        
+        # Parse exact lesson datetime
+        lesson_dt = datetime.strptime(time_from, "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+        if lesson_dt <= now:
+            continue
+            
+        weekday = lesson_dt.weekday()
         time_only = time_from.split(" ")[1][:5]
         
         if weekday == 4 and "13:00" <= time_only <= "16:00":
@@ -190,12 +195,9 @@ async def fetch_probation_lessons():
     headers = {"X-ALFACRM-TOKEN": token, "Content-Type": "application/json"}
     
     async with httpx.AsyncClient() as client:
-        results = await asyncio.gather(
-            _fetch_status(client, headers, date_from, date_to, 1),
-            _fetch_status(client, headers, date_from, date_to, 2),
-        )
+        # Fetch only status=1 (Planned) to save time, as conducted (status=2) are in the past
+        all_items = await _fetch_status(client, headers, date_from, date_to, 1)
         
-    all_items = results[0] + results[1]
     return _parse_lessons(all_items, tz)
 
 async def ensure_db():
@@ -426,8 +428,18 @@ async def cmd_freeprob(message: types.Message):
         
     DAYS = ["Երկուշաբթի", "Երեքշաբթի", "Չորեքշաբթի", "Հինգշաբթի", "Ուրբաթ", "Շաբաթ", "Կիրակի"]
     
-    text = "🟢 **Ազատ տեղեր փորձնական դասերի համար**\n\n"
+    tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+    now = datetime.now(tz)
+    current_w = now.weekday()
+    current_time = now.time()
+    
+    text = "🟢 **Ազատ տեղեր փորձնական դասերի համար (առաջիկա)**\n\n"
+    has_any_slots = False
+    
     for w in range(6):
+        if w < current_w:
+            continue
+            
         day_name = DAYS[w]
         slots = STRUCTURED_SCHEDULE[w]
         
@@ -438,6 +450,16 @@ async def cmd_freeprob(message: types.Message):
             t = slot["time"]
             s = slot["subject"]
             cap = slot["capacity"]
+            
+            # For today, check if slot is in the past
+            if w == current_w:
+                try:
+                    slot_t_str = t.split("-")[0] if "-" in t else t
+                    slot_time = datetime.strptime(slot_t_str, "%H:%M").time()
+                    if slot_time <= current_time:
+                        continue
+                except ValueError:
+                    pass
             
             shared = slot.get("shared_capacity", False)
             if shared:
@@ -451,10 +473,14 @@ async def cmd_freeprob(message: types.Message):
             if available > 0:
                 day_text += f"  • {t} — {s} (Ազատ՝ {available})\n"
                 has_slots = True
+                has_any_slots = True
                 
         if has_slots:
             text += day_text + "—\n"
             
+    if not has_any_slots:
+        text += "Այս շաբաթ այլևս ազատ տեղեր չկան:\n"
+        
     if text.endswith("—\n"):
         text = text[:-2]
         
