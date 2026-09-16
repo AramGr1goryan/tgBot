@@ -16,8 +16,8 @@ API_TOKEN = os.getenv("BOT_TOKEN")
 POSTGRES_URL = os.getenv("POSTGRES_URL")
 GROUP_CHAT_ID = os.getenv("GROUP_CHAT_ID")
 TOPIC_THREAD_ID = os.getenv("TOPIC_THREAD_ID")
-ALFACRM_EMAIL = os.getenv("ALFACRM_EMAIL", "aramgrigoryan2k4@gmail.com")
-ALFACRM_API_KEY = os.getenv("ALFACRM_API_KEY", "70cc373b-bed2-11f0-bfab-3cecefbdd1ae")
+ALFACRM_EMAIL = os.getenv("ALFACRM_EMAIL", "aramgrigoryan2k4@gmail.com").strip().strip('"').strip("'")
+ALFACRM_API_KEY = os.getenv("ALFACRM_API_KEY", "70cc373b-bed2-11f0-bfab-3cecefbdd1ae").strip().strip('"').strip("'")
 ADMIN_ID = 1472817960
 
 bot = Bot(token=API_TOKEN) if API_TOKEN else None
