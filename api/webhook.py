@@ -8,13 +8,16 @@ import os
 import re
 from io import BytesIO
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 import zoneinfo
+import httpx
 
 API_TOKEN = os.getenv("BOT_TOKEN")
 POSTGRES_URL = os.getenv("POSTGRES_URL")
 GROUP_CHAT_ID = os.getenv("GROUP_CHAT_ID")
 TOPIC_THREAD_ID = os.getenv("TOPIC_THREAD_ID")
+ALFACRM_EMAIL = os.getenv("ALFACRM_EMAIL", "aramgrigoryan2k4@gmail.com")
+ALFACRM_API_KEY = os.getenv("ALFACRM_API_KEY", "70cc373b-bed2-11f0-bfab-3cecefbdd1ae")
 ADMIN_ID = 1472817960
 
 bot = Bot(token=API_TOKEN) if API_TOKEN else None
@@ -42,6 +45,133 @@ PROB_SCHEDULE = {
     5: ("Շաբաթ", "• 17:30 — Lego (6 աշակերտ)\n• 17:30 — Makeblock (3 աշակերտ)"),
     6: ("Կիրակի", "Այսօր փորձնական դասեր չկան։")
 }
+
+STRUCTURED_SCHEDULE = {
+    0: [
+        {"time": "15:00", "subject": "Lego", "capacity": 6},
+        {"time": "15:00", "subject": "MakeBlock", "capacity": 3},
+        {"time": "17:00", "subject": "Lego", "capacity": 2},
+        {"time": "18:30", "subject": "Lego", "capacity": 3},
+    ],
+    1: [
+        {"time": "15:00", "subject": "Lego", "capacity": 6},
+        {"time": "15:00", "subject": "MakeBlock", "capacity": 3},
+        {"time": "16:00", "subject": "Lego", "capacity": 6},
+        {"time": "16:00", "subject": "MakeBlock", "capacity": 3},
+        {"time": "18:00", "subject": "Lego", "capacity": 1},
+    ],
+    2: [
+        {"time": "15:00", "subject": "Lego", "capacity": 1, "shared_capacity": True},
+        {"time": "15:00", "subject": "MakeBlock", "capacity": 1, "shared_capacity": True},
+        {"time": "17:30", "subject": "Lego", "capacity": 3},
+        {"time": "18:30", "subject": "Lego", "capacity": 3},
+    ],
+    3: [
+        {"time": "14:00", "subject": "Lego", "capacity": 5},
+        {"time": "15:00", "subject": "Lego", "capacity": 3, "shared_capacity": True},
+        {"time": "15:00", "subject": "MakeBlock", "capacity": 3, "shared_capacity": True},
+        {"time": "17:00", "subject": "Lego", "capacity": 3},
+    ],
+    4: [
+        {"time": "13:00-16:00", "subject": "Lego", "capacity": 6},
+        {"time": "13:00-16:00", "subject": "MakeBlock", "capacity": 3},
+        {"time": "18:30", "subject": "Lego", "capacity": 6},
+        {"time": "18:30", "subject": "MakeBlock", "capacity": 3},
+    ],
+    5: [
+        {"time": "17:30", "subject": "Lego", "capacity": 6},
+        {"time": "17:30", "subject": "MakeBlock", "capacity": 3},
+    ],
+    6: []
+}
+
+_alfacrm_token = None
+_alfacrm_token_expires = 0
+
+async def get_alfacrm_token():
+    global _alfacrm_token, _alfacrm_token_expires
+    now = datetime.now().timestamp()
+    if _alfacrm_token and now < _alfacrm_token_expires:
+        return _alfacrm_token
+        
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            "https://robixlab.s20.online/v2api/auth/login",
+            json={"email": ALFACRM_EMAIL, "api_key": ALFACRM_API_KEY}
+        )
+        data = resp.json()
+        _alfacrm_token = data.get("token")
+        _alfacrm_token_expires = now + 7200 # 2 hours
+        return _alfacrm_token
+
+async def fetch_probation_lessons():
+    token = await get_alfacrm_token()
+    tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+    now = datetime.now(tz)
+    
+    monday = now - timedelta(days=now.weekday())
+    sunday = monday + timedelta(days=6)
+    
+    date_from = monday.strftime("%Y-%m-%d")
+    date_to = sunday.strftime("%Y-%m-%d")
+    
+    headers = {"X-ALFACRM-TOKEN": token, "Content-Type": "application/json"}
+    payload = {"date_from": date_from, "date_to": date_to}
+    
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            "https://robixlab.s20.online/v2api/1/lesson/index",
+            headers=headers,
+            json=payload
+        )
+        data = resp.json()
+        
+    items = data.get("items", [])
+    booked_slots = []
+    
+    for item in items:
+        if item.get("status") == 3: # Отменен
+            continue
+            
+        r_id = item.get("room_id")
+        s_id = item.get("subject_id")
+        t_id = item.get("lesson_type_id")
+        
+        if t_id not in [3, 8, 9]:
+            continue
+            
+        subject = None
+        if s_id == 24 and r_id in [30, 33]:
+            subject = "Lego"
+        elif s_id == 23 and r_id in [31, 34]:
+            subject = "MakeBlock"
+            
+        if not subject:
+            continue
+            
+        details = item.get("details", [])
+        participants = len(details)
+        if participants == 0:
+            continue
+            
+        date_str = item.get("date")
+        dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=tz)
+        weekday = dt.weekday()
+        
+        time_from = item.get("time_from")
+        time_only = time_from.split(" ")[1][:5]
+        
+        if weekday == 4 and "13:00" <= time_only <= "16:00":
+            time_only = "13:00-16:00"
+            
+        booked_slots.append({
+            "weekday": weekday,
+            "time": time_only,
+            "subject": subject,
+            "participants": participants
+        })
+        
+    return booked_slots
 
 async def ensure_db():
     global db_initialized, BANNED_USERS
@@ -178,7 +308,9 @@ async def cmd_help(message: types.Message):
         "/task[համար] - Նշել որպես կատարված (օրինակ՝ /task1)\n\n"
         "Փորձնական դասեր (G.N ՃԻՇՏ մասնաճյուղ)՝\n"
         "/prob - Տեսնել այսօրվա հասանելի ժամերը\n"
-        "/proball - Տեսնել բոլոր օրերի հասանելի ժամերը\n\n"
+        "/proball - Տեսնել բոլոր օրերի հասանելի ժամերը\n"
+        "/getweek - Տեսնել այս շաբաթվա գրանցված դասերը (CRM)\n"
+        "/freeprob - Հաշվել ազատ տեղերը (CRM)\n\n"
         "Lego թեմաներ՝\n"
         "/lego [խումբ] - Ընտրել թեմա (օրինակ՝ /lego Spider man)"
     )
@@ -207,6 +339,93 @@ async def cmd_proball(message: types.Message):
         text += f"🔹 {day_name}\n{schedule}\n——————————————————————————\n"
         
     await message.answer(text)
+
+@dp.message(Command("getweek"))
+async def cmd_getweek(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    
+    await message.answer("🔄 Կապ եմ հաստատում Alfa CRM-ի հետ...")
+    booked_slots = await fetch_probation_lessons()
+    
+    if not booked_slots:
+        await message.answer("Այս շաբաթվա համար գրանցված փորձնական դասեր չկան:")
+        return
+        
+    DAYS = ["Երկուշաբթի", "Երեքշաբթի", "Չորեքշաբթի", "Հինգշաբթի", "Ուրբաթ", "Շաբաթ", "Կիրակի"]
+    
+    grouped = {}
+    for slot in booked_slots:
+        w = slot["weekday"]
+        t = slot["time"]
+        s = slot["subject"]
+        p = slot["participants"]
+        
+        if w not in grouped: grouped[w] = {}
+        if t not in grouped[w]: grouped[w][t] = {}
+        if s not in grouped[w][t]: grouped[w][t][s] = 0
+        grouped[w][t][s] += p
+        
+    text = "🗓 **Գրանցված փորձնական դասեր (Այս շաբաթ)**\n\n"
+    for w in sorted(grouped.keys()):
+        text += f"🔹 {DAYS[w]}\n"
+        for t in sorted(grouped[w].keys()):
+            for s, p in grouped[w][t].items():
+                text += f"  • {t} — {s} ({p} աշակերտ)\n"
+        text += "—\n"
+        
+    await message.answer(text, parse_mode="Markdown")
+
+@dp.message(Command("freeprob"))
+async def cmd_freeprob(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    
+    await message.answer("🔄 Հաշվարկում եմ ազատ տեղերը...")
+    booked_slots = await fetch_probation_lessons()
+    
+    booked = {}
+    for slot in booked_slots:
+        w = slot["weekday"]
+        t = slot["time"]
+        s = slot["subject"]
+        p = slot["participants"]
+        key = f"{w}_{t}_{s}"
+        booked[key] = booked.get(key, 0) + p
+        
+    DAYS = ["Երկուշաբթի", "Երեքշաբթի", "Չորեքշաբթի", "Հինգշաբթի", "Ուրբաթ", "Շաբաթ", "Կիրակի"]
+    
+    text = "🟢 **Ազատ տեղեր փորձնական դասերի համար**\n\n"
+    for w in range(6):
+        day_name = DAYS[w]
+        slots = STRUCTURED_SCHEDULE[w]
+        
+        day_text = f"🔹 {day_name}\n"
+        has_slots = False
+        
+        for slot in slots:
+            t = slot["time"]
+            s = slot["subject"]
+            cap = slot["capacity"]
+            
+            shared = slot.get("shared_capacity", False)
+            if shared:
+                b_lego = booked.get(f"{w}_{t}_Lego", 0)
+                b_makeblock = booked.get(f"{w}_{t}_MakeBlock", 0)
+                available = cap - b_lego - b_makeblock
+            else:
+                b = booked.get(f"{w}_{t}_{s}", 0)
+                available = cap - b
+                
+            if available > 0:
+                day_text += f"  • {t} — {s} (Ազատ՝ {available})\n"
+                has_slots = True
+                
+        if has_slots:
+            text += day_text + "—\n"
+            
+    if text.endswith("—\n"):
+        text = text[:-2]
+        
+    await message.answer(text, parse_mode="Markdown")
 
 @dp.message(Command("addtask"))
 async def cmd_addtask(message: types.Message):
