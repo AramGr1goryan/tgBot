@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ForceReply, InlineKeyboardButton, InlineKeyboardMarkup
@@ -16,8 +16,8 @@ import httpx
 
 API_TOKEN = os.getenv("BOT_TOKEN")
 POSTGRES_URL = os.getenv("POSTGRES_URL")
-GROUP_CHAT_ID = os.getenv("GROUP_CHAT_ID")
-TOPIC_THREAD_ID = os.getenv("TOPIC_THREAD_ID")
+GROUP_CHAT_ID = "-1003711234861" # os.getenv("GROUP_CHAT_ID")
+TOPIC_THREAD_ID = "2" # os.getenv("TOPIC_THREAD_ID")
 ALFACRM_EMAIL = (os.getenv("ALFACRM_EMAIL") or "").strip()
 ALFACRM_API_KEY = (os.getenv("ALFACRM_API_KEY") or "").strip()
 ADMIN_ID = 1472817960
