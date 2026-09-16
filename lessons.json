@@ -1,0 +1,163 @@
+﻿[
+    {
+        "id":  48362,
+        "date":  "2026-09-16",
+        "time_from":  "2026-09-16 18:30:01",
+        "time_to":  "2026-09-16 19:20:00",
+        "room_id":  33,
+        "subject_id":  17,
+        "lesson_type_id":  2,
+        "details":  [
+                        {
+                            "id":  128717,
+                            "branch_id":  1,
+                            "customer_id":  1589,
+                            "lesson_id":  48362,
+                            "ctt_id":  null,
+                            "reason_id":  1,
+                            "reason_name":  "Уважительная причина",
+                            "is_attend":  0,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  0,
+                            "note":  ""
+                        },
+                        {
+                            "id":  134286,
+                            "branch_id":  1,
+                            "customer_id":  1011,
+                            "lesson_id":  48362,
+                            "ctt_id":  1558,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  1,
+                            "commission":  "3125.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  0,
+                            "note":  ""
+                        },
+                        {
+                            "id":  141149,
+                            "branch_id":  1,
+                            "customer_id":  1188,
+                            "lesson_id":  48362,
+                            "ctt_id":  1694,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  1,
+                            "commission":  "15000.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  0,
+                            "note":  ""
+                        },
+                        {
+                            "id":  145393,
+                            "branch_id":  1,
+                            "customer_id":  3451,
+                            "lesson_id":  48362,
+                            "ctt_id":  null,
+                            "reason_id":  1,
+                            "reason_name":  "Уважительная причина",
+                            "is_attend":  0,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  0,
+                            "note":  ""
+                        }
+                    ]
+    },
+    {
+        "id":  55023,
+        "date":  "2026-09-16",
+        "time_from":  "2026-09-16 18:30:01",
+        "time_to":  "2026-09-16 19:20:00",
+        "room_id":  33,
+        "subject_id":  24,
+        "lesson_type_id":  9,
+        "details":  [
+                        {
+                            "id":  144518,
+                            "branch_id":  1,
+                            "customer_id":  3277,
+                            "lesson_id":  55023,
+                            "ctt_id":  null,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  1,
+                            "commission":  "0.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  0,
+                            "note":  ""
+                        }
+                    ]
+    },
+    {
+        "id":  55441,
+        "date":  "2026-09-16",
+        "time_from":  "2026-09-16 18:30:01",
+        "time_to":  "2026-09-16 19:20:00",
+        "room_id":  34,
+        "subject_id":  23,
+        "lesson_type_id":  9,
+        "details":  [
+
+                    ]
+    },
+    {
+        "id":  56134,
+        "date":  "2026-09-16",
+        "time_from":  "2026-09-16 18:00:01",
+        "time_to":  "2026-09-16 18:50:00",
+        "room_id":  30,
+        "subject_id":  17,
+        "lesson_type_id":  1,
+        "details":  [
+                        {
+                            "id":  145441,
+                            "branch_id":  1,
+                            "customer_id":  3352,
+                            "lesson_id":  56134,
+                            "ctt_id":  1703,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  1,
+                            "commission":  "16666.67",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  0,
+                            "note":  ""
+                        }
+                    ]
+    },
+    {
+        "id":  56187,
+        "date":  "2026-09-16",
+        "time_from":  "2026-09-16 18:00:01",
+        "time_to":  "2026-09-16 18:50:00",
+        "room_id":  30,
+        "subject_id":  17,
+        "lesson_type_id":  1,
+        "details":  [
+                        {
+                            "id":  145494,
+                            "branch_id":  1,
+                            "customer_id":  3337,
+                            "lesson_id":  56187,
+                            "ctt_id":  1704,
+                            "reason_id":  null,
+                            "reason_name":  "",
+                            "is_attend":  1,
+                            "commission":  "35000.00",
+                            "grade":  null,
+                            "homework_grade_id":  null,
+                            "bonus":  0,
+                            "note":  ""
+                        }
+                    ]
+    }
+]

@@ -1,0 +1,102 @@
+﻿[
+    {
+        "id":  24,
+        "name":  "* Пробный LEGO Education"
+    },
+    {
+        "id":  23,
+        "name":  "* Пробный MakeBlock"
+    },
+    {
+        "id":  17,
+        "name":  "LEGO Education - Базовый"
+    },
+    {
+        "id":  18,
+        "name":  "LEGO Education - Основной"
+    },
+    {
+        "id":  19,
+        "name":  "LEGO Education - Продвинутый"
+    },
+    {
+        "id":  20,
+        "name":  "MakeBlock - Базовый"
+    },
+    {
+        "id":  21,
+        "name":  "MakeBlock - Основной"
+    },
+    {
+        "id":  22,
+        "name":  "MakeBlock - Продвинутый"
+    },
+    {
+        "id":  5,
+        "name":  "Arduino"
+    },
+    {
+        "id":  8,
+        "name":  "Codey"
+    },
+    {
+        "id":  2,
+        "name":  "FPV полет"
+    },
+    {
+        "id":  3,
+        "name":  "АРХИВ / Lego education Wedo 2.0"
+    },
+    {
+        "id":  15,
+        "name":  "Lego выездной"
+    },
+    {
+        "id":  4,
+        "name":  "АРХИВ / MakeBlock"
+    },
+    {
+        "id":  7,
+        "name":  "MBot 2"
+    },
+    {
+        "id":  9,
+        "name":  "Mtiny"
+    },
+    {
+        "id":  16,
+        "name":  "mTiny выездной"
+    },
+    {
+        "id":  10,
+        "name":  "Ultimate 2.0"
+    },
+    {
+        "id":  14,
+        "name":  "Арцах индивидуальный"
+    },
+    {
+        "id":  12,
+        "name":  "Арцах коди"
+    },
+    {
+        "id":  13,
+        "name":  "Арцах мтини"
+    },
+    {
+        "id":  6,
+        "name":  "Дневное пребывание"
+    },
+    {
+        "id":  25,
+        "name":  "Курс mTiny"
+    },
+    {
+        "id":  11,
+        "name":  "Практическия занятия"
+    },
+    {
+        "id":  26,
+        "name":  "Я - инженер!"
+    }
+]
