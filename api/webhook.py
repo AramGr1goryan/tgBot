@@ -261,6 +261,26 @@ async def cmd_unban(message: types.Message):
         BANNED_USERS.remove(target_id)
     await message.answer(f"✅ Օգտատեր {target_id}-ի բլոկավորումը հանված է:")
 
+@dp.message(Command("getusers"))
+async def cmd_getusers(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    await ensure_db()
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+    rows = await conn.fetch("SELECT user_id, name FROM executors ORDER BY name")
+    await conn.close()
+    
+    if not rows:
+        await message.answer("Ակտիվ օգտատերեր չկան (ոչ ոք դեռ չի գրանցվել):")
+        return
+        
+    response = "Գրանցված օգտատերեր (Անուն - ID)՝\n\n"
+    for row in rows:
+        response += f"{row['name']} - {row['user_id']}\n"
+        
+    await message.answer(response)
+
 # Загрузка HTML файла с темами Lego
 @dp.message(F.document)
 async def process_html_upload(message: types.Message):
