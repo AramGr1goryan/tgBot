@@ -474,7 +474,7 @@ async def cmd_about(message: types.Message):
         "• Փորձնական դասերի գրանցումների դիտում ըստ օրերի:\n"
         "• Alfa CRM-ից աշակերտների քարտերի և հեռախոսահամարների ստացում:\n\n"
         "🎓 **Ուսուցիչների բաժին**\n"
-        "• Lego խմբերի համար բաց թեմաների որոնում և ընտրություն:\n\n"
+        "• Lego խմբերի համար բաց թեմաների որոնում և ընտրություն:\n"        "• Անձնական դասացուցակի դիտում այսօր և վաղը (/myschedule):\n\n"
         "Ամբողջական հրամանների համար գրեք /help:\n\n" 
         "Բոտը ստեղծվել է միակ ու անկրկնելի, մի հրաշք, բայց միևնույն ժամանակ հասարակ մահկանացու՝ Արամ Գրիգորյանի կողմից։ Յանի իմ բոտն ա, ինչ ուզեմ՝ կգրեմ, դեմ չեք, չէ՞",
         parse_mode="Markdown"
@@ -499,9 +499,111 @@ async def cmd_help(message: types.Message):
         "/getweek - Գալիք շաբաթվա գրանցվածները\n"
         "/freeprob - Ազատ տեղեր փորձնական դասի համար\n\n"
         "🎓 **Ուսուցիչների բաժին**\n"
-        "/lego [թեմա] - Գտնել բաց թեմաներ (օրինակ՝ /lego Spider man)",
+        "/lego [թեմա] - Գտնել բաց թեմաներ (օրինակ՝ /lego Spider man)\n"        "/myschedule - Տեսնել սեփական դասացուցակը այսօրվա և վաղվա համար",
         parse_mode="Markdown"
     )
+
+import json
+
+def get_mapping(filename):
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return {item['id']: item['name'] for item in data}
+    except Exception:
+        return {}
+
+ROOMS_MAP = get_mapping('rooms.json')
+SUBJECTS_MAP = get_mapping('subjects.json')
+
+TEACHERS_MAP = {
+    1472817960: {"id": 20, "name": "Արամ Գրիգորյան"},
+    1071411870: {"id": 25, "name": "Նարե Ազարյան"},
+    1037044744: {"id": 12, "name": "Լիա Ավետիսյան"}
+}
+
+@dp.message(Command("myschedule"))
+async def cmd_myschedule(message: types.Message):
+    user_id = message.from_user.id
+    if user_id not in TEACHERS_MAP:
+        await message.answer("❌ Դուք գրանցված չեք որպես ուսուցիչ համակարգում:")
+        return
+        
+    teacher = TEACHERS_MAP[user_id]
+    teacher_id = teacher["id"]
+    
+    token = await get_alfacrm_token()
+    if not token:
+        await message.answer("❌ CRM API Token error")
+        return
+        
+    tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+    today = datetime.now(tz)
+    tomorrow = today + timedelta(days=1)
+    
+    date_from = today.strftime("%Y-%m-%d")
+    date_to = tomorrow.strftime("%Y-%m-%d")
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                "https://robixlab.s20.online/v2api/1/lesson/index",
+                headers=headers,
+                json={"teacher_id": teacher_id, "date_from": date_from, "date_to": date_to},
+                timeout=10.0
+            )
+            if response.status_code == 200:
+                items = response.json().get("items", [])
+            else:
+                await message.answer("❌ CRM API Request failed")
+                return
+        except Exception as e:
+            await message.answer(f"❌ Սխալ: {e}")
+            return
+            
+    if not items:
+        await message.answer(f"📅 **{teacher['name']}**\n\nԱյսօր և վաղը դասեր չկան:", parse_mode="Markdown")
+        return
+        
+    schedule_today = []
+    schedule_tomorrow = []
+    
+    # Sort items by time_from
+    items.sort(key=lambda x: x.get("time_from", ""))
+    
+    for item in items:
+        date_str = item.get("date")
+        time_from = item.get("time_from", "")[-8:-3]
+        time_to = item.get("time_to", "")[-8:-3]
+        room = ROOMS_MAP.get(item.get("room_id"), "Անհայտ")
+        subject = SUBJECTS_MAP.get(item.get("subject_id"), "Անհայտ")
+        
+        lesson_text = f"🕒 {time_from} - {time_to} | 🏫 {room} | 📚 {subject}"
+        
+        if date_str == date_from:
+            schedule_today.append(lesson_text)
+        elif date_str == date_to:
+            schedule_tomorrow.append(lesson_text)
+            
+    response_text = f"📅 **{teacher['name']} - Գրաֆիկ**\n\n"
+    
+    if schedule_today:
+        response_text += "🔹 **Այսօր**\n" + "\n".join(schedule_today) + "\n\n"
+    else:
+        response_text += "🔹 **Այսօր:** Դասեր չկան\n\n"
+        
+    if schedule_tomorrow:
+        response_text += "🔹 **Վաղը**\n" + "\n".join(schedule_tomorrow)
+    else:
+        response_text += "🔹 **Վաղը:** Դասեր չկան"
+        
+    await message.answer(response_text, parse_mode="Markdown")
 
 @dp.message(Command("prob"))
 async def cmd_prob(message: types.Message):
