@@ -197,21 +197,19 @@ async def get_alfacrm_customer_by_name(name: str):
     }
     
     clean_name = name.strip()
-    words = [w for w in clean_name.split() if len(w) >= 2]
+    rus_name = transliterate_name(clean_name)
     
-    payloads = [
-        {"name": clean_name, "is_study": [0, 1, 2]},
-        {"name": clean_name, "is_study": 0},
-        {"name": clean_name, "is_study": 1}
-    ]
-    
+    search_names = [clean_name]
+    if rus_name.lower() != clean_name.lower():
+        search_names.append(rus_name)
+        
     client = get_http_client()
-    for payload in payloads:
+    for search_n in search_names:
         try:
             response = await client.post(
                 "https://robixlab.s20.online/v2api/1/customer/index",
                 headers=headers,
-                json=payload,
+                json={"name": search_n, "is_study": [0, 1, 2]},
                 timeout=5.0
             )
             if response.status_code == 200:
@@ -219,10 +217,14 @@ async def get_alfacrm_customer_by_name(name: str):
                 if items:
                     return items[0]
         except Exception as e:
-            print(f"Error searching customer: {e}")
+            print(f"Error searching customer '{search_n}': {e}")
             
-    if len(words) > 1:
-        for word in words:
+    words = [w for w in clean_name.split() if len(w) >= 2]
+    rus_words = [w for w in rus_name.split() if len(w) >= 2]
+    all_words = list(dict.fromkeys(words + rus_words))
+    
+    if len(all_words) > 1:
+        for word in all_words:
             try:
                 response = await client.post(
                     "https://robixlab.s20.online/v2api/1/customer/index",
@@ -232,7 +234,7 @@ async def get_alfacrm_customer_by_name(name: str):
                 )
                 if response.status_code == 200:
                     items = response.json().get("items", [])
-                    other_words = [w.lower() for w in words if w.lower() != word.lower()]
+                    other_words = [w.lower() for w in all_words if w.lower() != word.lower()]
                     for item in items:
                         item_name = item.get("name", "").lower()
                         if any(ow in item_name for ow in other_words) or len(items) == 1:
@@ -1313,8 +1315,11 @@ async def cmd_add_student_to_group(message: types.Message):
 
     status_msg = await message.answer("🔄 Փնտրում եմ խումբը և աշակերտին Alfa CRM-ում (Գարեգին Նժդեհ)...")
     
-    customer = None
+    # 1. Fetch all groups in 1 single HTTP request
+    all_groups = await get_all_alfacrm_groups()
+    
     group = None
+    student_query = None
     
     # Check if explicit separator (comma or pipe) is used
     if ',' in raw_args or '|' in raw_args:
@@ -1322,55 +1327,53 @@ async def cmd_add_student_to_group(message: types.Message):
         parts = [p.strip() for p in raw_args.split(sep, 1)]
         p1, p2 = parts[0], parts[1]
         
-        # Test 1: p1 is student, p2 is group
-        c_id1 = extract_customer_id(p1)
-        c1 = await get_alfacrm_customer_by_id(c_id1) if c_id1 is not None else await get_alfacrm_customer_by_name(p1)
-        g2 = await get_alfacrm_group_by_name(p2)
-        if c1 and g2:
-            customer, group = c1, g2
+        g1 = find_group_in_list(p1, all_groups)
+        g2 = find_group_in_list(p2, all_groups)
+        
+        if g1 and not g2:
+            group = g1
+            student_query = p2
+        elif g2 and not g1:
+            group = g2
+            student_query = p1
+        elif g1 and g2:
+            group = g1
+            student_query = p2
         else:
-            # Test 2: p1 is group, p2 is student
-            g1 = await get_alfacrm_group_by_name(p1)
-            c_id2 = extract_customer_id(p2)
-            c2 = await get_alfacrm_customer_by_id(c_id2) if c_id2 is not None else await get_alfacrm_customer_by_name(p2)
-            if c2 and g1:
-                customer, group = c2, g1
-            else:
-                customer = c1 or c2
-                group = g1 or g2
+            student_query = p1
     else:
-        # Space separated: try different split positions
+        # Space separated search: try matching group in local memory without HTTP requests
         words = raw_args.split()
         
-        for i in range(1, len(words)):
-            s_cand = " ".join(words[:i])
+        # Try finding group from different slice combinations
+        for i in range(len(words) - 1, 0, -1):
             g_cand = " ".join(words[i:])
-            
-            c_id = extract_customer_id(s_cand)
-            c = await get_alfacrm_customer_by_id(c_id) if c_id is not None else await get_alfacrm_customer_by_name(s_cand)
-            if c:
-                g = await get_alfacrm_group_by_name(g_cand)
-                if g:
-                    customer, group = c, g
-                    break
-                    
-            # Reverse order check (group first, student second)
-            g = await get_alfacrm_group_by_name(s_cand)
-            if g:
-                c_id2 = extract_customer_id(g_cand)
-                c = await get_alfacrm_customer_by_id(c_id2) if c_id2 is not None else await get_alfacrm_customer_by_name(g_cand)
-                if c:
-                    customer, group = c, g
-                    break
-                    
-        # Fallback if no clean split worked: search group by first word, student by remainder
-        if not customer or not group:
-            g = await get_alfacrm_group_by_name(words[0])
+            g = find_group_in_list(g_cand, all_groups)
             if g:
                 group = g
-                rem_student = " ".join(words[1:])
-                c_id = extract_customer_id(rem_student)
-                customer = await get_alfacrm_customer_by_id(c_id) if c_id is not None else await get_alfacrm_customer_by_name(rem_student)
+                student_query = " ".join(words[:i])
+                break
+                
+        if not group:
+            for i in range(1, len(words)):
+                g_cand = " ".join(words[:i])
+                g = find_group_in_list(g_cand, all_groups)
+                if g:
+                    group = g
+                    student_query = " ".join(words[i:])
+                    break
+                    
+        if not group:
+            # Fallback: check last word or first word as group query candidate
+            g = find_group_in_list(words[-1], all_groups)
+            if g:
+                group = g
+                student_query = " ".join(words[:-1])
+            else:
+                g = find_group_in_list(words[0], all_groups)
+                if g:
+                    group = g
+                    student_query = " ".join(words[1:])
 
     if not group:
         await status_msg.edit_text(
@@ -1379,9 +1382,22 @@ async def cmd_add_student_to_group(message: types.Message):
         )
         return
 
+    if not student_query:
+        await status_msg.edit_text(
+            f"❌ «{raw_args}» հարցման մեջ աշակերտի անունը/ID-ն նշված չէ:"
+        )
+        return
+
+    # Fetch customer ONCE (by ID or name)
+    c_id = extract_customer_id(student_query)
+    if c_id is not None:
+        customer = await get_alfacrm_customer_by_id(c_id)
+    else:
+        customer = await get_alfacrm_customer_by_name(student_query)
+
     if not customer:
         await status_msg.edit_text(
-            f"❌ «{raw_args}» հարցման մեջ աշակերտը/լիդը չգտնվեց Alfa CRM-ում:\n"
+            f"❌ «{student_query}» աշակերտը/լիդը չգտնվեց Alfa CRM-ում:\n"
             "Ստուգեք անվանման ճշտությունը կամ ուղարկեք ID-ն:"
         )
         return
