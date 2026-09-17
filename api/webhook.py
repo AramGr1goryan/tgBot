@@ -282,6 +282,102 @@ async def check_customer_rooms(customer_id: int) -> bool:
             print(f"Error checking rooms: {e}")
     return False
 
+async def get_alfacrm_group_by_name(group_name: str):
+    token = await get_alfacrm_token()
+    if not token: return None
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    clean_group = group_name.strip()
+    
+    async with httpx.AsyncClient() as client:
+        for payload in [{"name": clean_group}, {"name": clean_group, "is_main": 1}, {}]:
+            try:
+                resp = await client.post(
+                    "https://robixlab.s20.online/v2api/1/group/index",
+                    headers=headers,
+                    json=payload,
+                    timeout=10.0
+                )
+                if resp.status_code == 200:
+                    items = resp.json().get("items", [])
+                    for g in items:
+                        if clean_group.lower() == g.get("name", "").strip().lower():
+                            return g
+                    for g in items:
+                        if clean_group.lower() in g.get("name", "").strip().lower():
+                            return g
+            except Exception as e:
+                print(f"Error searching group '{clean_group}': {e}")
+                
+    return None
+
+async def add_customer_to_alfacrm_group(group_id: int, customer_id: int, group_obj: dict = None):
+    token = await get_alfacrm_token()
+    if not token: return False, "Token error"
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        if not group_obj:
+            try:
+                resp = await client.post(
+                    "https://robixlab.s20.online/v2api/1/group/index",
+                    headers=headers,
+                    json={"id": group_id},
+                    timeout=10.0
+                )
+                if resp.status_code == 200:
+                    items = resp.json().get("items", [])
+                    if items:
+                        group_obj = items[0]
+            except Exception as e:
+                print(f"Error fetching group {group_id}: {e}")
+                
+        existing_ids = []
+        if group_obj:
+            existing_ids = group_obj.get("customer_ids") or []
+            
+        if customer_id in existing_ids:
+            return True, "already_in_group"
+            
+        updated_ids = list(set(existing_ids + [customer_id]))
+        
+        payload = {
+            "id": group_id,
+            "customer_ids": updated_ids
+        }
+        if group_obj and group_obj.get("name"):
+            payload["name"] = group_obj.get("name")
+            
+        try:
+            update_resp = await client.post(
+                f"https://robixlab.s20.online/v2api/1/group/update?id={group_id}",
+                headers=headers,
+                json=payload,
+                timeout=10.0
+            )
+            if update_resp.status_code == 200:
+                res_data = update_resp.json()
+                if res_data.get("success") or res_data.get("model") or res_data.get("items") or res_data.get("id") or not res_data.get("errors"):
+                    return True, "added"
+                else:
+                    return False, str(res_data.get("errors") or res_data)
+            else:
+                return False, f"HTTP {update_resp.status_code}: {update_resp.text}"
+        except Exception as e:
+            return False, str(e)
+            
+    return False, "Unknown error"
+
 async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str, payer_name: str):
     token = await get_alfacrm_token()
     if not token: return False
@@ -1163,6 +1259,143 @@ async def cmd_complete_task_number(message: types.Message):
 @dp.message(Command("task"))
 async def cmd_task_hint(message: types.Message):
     await message.answer("Խնդրում ենք նշել առաջադրանքի համարը, օրինակ՝ /task1")
+
+@dp.message(Command("add"))
+async def cmd_add_student_to_group(message: types.Message):
+    raw_args = message.text.replace("/add", "", 1).strip()
+    
+    if not raw_args:
+        await message.answer(
+            "👥 **Ավելացնել աշակերտին խմբում (Alfa CRM - Գարեգին Նժդեհ):**\n\n"
+            "⚠️ **Ուշադրություն!** Խումբը և աշակերտը պետք է CRM-ում ունենան **G.N** պրեֆիքս:\n\n"
+            "Խնդրում ենք գրել հետևյալ ձևաչափով՝\n"
+            "👉 `/add Saakyan Gexam Lego 1`\n\n"
+            "**Օրինակներ՝**\n"
+            "• `/add Saakyan Gexam Lego 1`\n"
+            "• `/add Lego 1, Saakyan Gexam`\n"
+            "• `/add 3402, Lego 1`",
+            parse_mode="Markdown"
+        )
+        return
+
+    status_msg = await message.answer("🔄 Փնտրում եմ խումբը և աշակերտին Alfa CRM-ում (Գարեգին Նժդեհ)...")
+    
+    customer = None
+    group = None
+    
+    # Check if explicit separator (comma or pipe) is used
+    if ',' in raw_args or '|' in raw_args:
+        sep = ',' if ',' in raw_args else '|'
+        parts = [p.strip() for p in raw_args.split(sep, 1)]
+        p1, p2 = parts[0], parts[1]
+        
+        # Test 1: p1 is student, p2 is group
+        c_id1 = extract_customer_id(p1)
+        c1 = await get_alfacrm_customer_by_id(c_id1) if c_id1 is not None else await get_alfacrm_customer_by_name(p1)
+        g2 = await get_alfacrm_group_by_name(p2)
+        if c1 and g2:
+            customer, group = c1, g2
+        else:
+            # Test 2: p1 is group, p2 is student
+            g1 = await get_alfacrm_group_by_name(p1)
+            c_id2 = extract_customer_id(p2)
+            c2 = await get_alfacrm_customer_by_id(c_id2) if c_id2 is not None else await get_alfacrm_customer_by_name(p2)
+            if c2 and g1:
+                customer, group = c2, g1
+            else:
+                customer = c1 or c2
+                group = g1 or g2
+    else:
+        # Space separated: try different split positions
+        words = raw_args.split()
+        
+        for i in range(1, len(words)):
+            s_cand = " ".join(words[:i])
+            g_cand = " ".join(words[i:])
+            
+            c_id = extract_customer_id(s_cand)
+            c = await get_alfacrm_customer_by_id(c_id) if c_id is not None else await get_alfacrm_customer_by_name(s_cand)
+            if c:
+                g = await get_alfacrm_group_by_name(g_cand)
+                if g:
+                    customer, group = c, g
+                    break
+                    
+            # Reverse order check (group first, student second)
+            g = await get_alfacrm_group_by_name(s_cand)
+            if g:
+                c_id2 = extract_customer_id(g_cand)
+                c = await get_alfacrm_customer_by_id(c_id2) if c_id2 is not None else await get_alfacrm_customer_by_name(g_cand)
+                if c:
+                    customer, group = c, g
+                    break
+                    
+        # Fallback if no clean split worked: search group by first word, student by remainder
+        if not customer or not group:
+            g = await get_alfacrm_group_by_name(words[0])
+            if g:
+                group = g
+                rem_student = " ".join(words[1:])
+                c_id = extract_customer_id(rem_student)
+                customer = await get_alfacrm_customer_by_id(c_id) if c_id is not None else await get_alfacrm_customer_by_name(rem_student)
+
+    if not group:
+        await status_msg.edit_text(
+            f"❌ «{raw_args}» հարցման մեջ խումբը չգտնվեց Գարեգին Նժդեհ տեղադրությունում:\n"
+            "Ստուգեք խմբի անվանման ճշտությունը:"
+        )
+        return
+
+    if not customer:
+        await status_msg.edit_text(
+            f"❌ «{raw_args}» հարցման մեջ աշակերտը/լիդը չգտնվեց Alfa CRM-ում:\n"
+            "Ստուգեք անվանման ճշտությունը կամ ուղարկեք ID-ն:"
+        )
+        return
+
+    group_name = group.get("name", "")
+    group_id = group.get("id")
+    customer_name = customer.get("name") or customer.get("legal_name", "Աշակերտ")
+    customer_id = customer.get("id")
+
+    # Check G.N prefix for group
+    if "G.N" not in group_name.upper():
+        await status_msg.edit_text(
+            f"⚠️ **«{group_name}» խումբը չունի «G.N» պրեֆիքս!**\n\n"
+            f"Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում խմբի անվանման սկզբում ավելացնել «G.N» (օրինակ՝ `G.N | {group_name}`) և կրկնել հրամանը:",
+            parse_mode="Markdown"
+        )
+        return
+
+    # Check G.N prefix for student
+    if "G.N" not in customer_name.upper():
+        await status_msg.edit_text(
+            f"⚠️ **«{customer_name}» աշակերտը չունի «G.N» պրեֆիքս!**\n\n"
+            f"Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում աշակերտի անվանման սկզբում ավելացնել «G.N» (օրինակ՝ `G.N | {customer_name}`) և կրկնել հրամանը:",
+            parse_mode="Markdown"
+        )
+        return
+
+    # Add student to group
+    success, msg = await add_customer_to_alfacrm_group(group_id, customer_id, group)
+    
+    if success:
+        if msg == "already_in_group":
+            await status_msg.edit_text(
+                f"ℹ️ «{customer_name}» աշակերտը արդեն իսկ գտնվում է «{group_name}» խմբում:"
+            )
+        else:
+            await status_msg.edit_text(
+                f"✅ **Հաջողությամբ ավելացվեց!**\n\n"
+                f"👤 Աշակերտ՝ **{customer_name}**\n"
+                f"👥 Խումբ՝ **{group_name}**",
+                parse_mode="Markdown"
+            )
+    else:
+        await status_msg.edit_text(
+            f"❌ Սխալ տեղի ունեցավ «{customer_name}» աշակերտին «{group_name}» խմբում ավելացնելիս:\n`{msg}`",
+            parse_mode="Markdown"
+        )
 
 @dp.message(Command("ban"))
 async def cmd_ban(message: types.Message):
