@@ -45,7 +45,7 @@ PROB_SCHEDULE = {
     2: ("Չորեքշաբթի", "• 15:00 — Lego կամ Makeblock (1 աշակերտ)\n• 17:30 — Lego (3 աշակերտ)\n• 18:30 — Lego (3 աշակերտ)"),
     3: ("Հինգշաբթի", "• 14:00 — Lego (5 աշակերտ, ռուսերեն)\n• 15:00 — Lego կամ Makeblock (3 աշակերտ)\n• 17:00 — Lego (3 աշակերտ)"),
     4: ("Ուրբաթ", "• 13:00 - 16:00 — Lego (6 աշակերտ) և Makeblock (3 աշակերտ)\n• 18:30 — Lego (6 աշակերտ) և Makeblock (3 աշակերտ)"),
-    5: ("Շաբաթ", "• 17:30 — Lego (6 աշակերտ)\n• 17:30 — Makeblock (3 աշակերտ)"),
+    5: ("Շաբաթ", "• 17:30— Lego (6 աշակերտ)\n• 17:30 — Makeblock (3 աշակերտ)"),
     6: ("Կիրակի", "Այսօր փորձնական դասեր չկան։")
 }
 
@@ -1258,6 +1258,36 @@ async def process_theme_selection(message: types.Message):
     else:
         await message.answer(f"❌ «{theme_choice}» թեման չի գտնվել «{group_name}» խմբում։ Համոզվեք, որ այն ճիշտ եք գրել։")
 
+def extract_customer_id(text: str) -> int | None:
+    text = text.strip()
+    if not text:
+        return None
+        
+    # Standalone digits (e.g. "8372")
+    if text.isdigit():
+        return int(text)
+        
+    # Explicit id parameter: id=8372 or ?id=8372 or &id=8372
+    match_id = re.search(r'[?&]?id=(\d+)', text, re.IGNORECASE)
+    if match_id:
+        return int(match_id.group(1))
+        
+    # customer/view path with ID: /customer/view/8372 or /customer/view?id=8372 or /customer/view...8372
+    match_view = re.search(r'customer/view.*?(\d+)', text, re.IGNORECASE)
+    if match_view:
+        return int(match_view.group(1))
+
+    # Label pattern like "id: 8372", "id 8372", "#8372"
+    match_label = re.search(r'(?:id|ID|#)[\s:=]*(\d+)', text)
+    if match_label:
+        return int(match_label.group(1))
+
+    return None
+
+def is_url_or_link(text: str) -> bool:
+    t = text.lower()
+    return 'http://' in t or 'https://' in t or 's20.online' in t or 'alfacrm' in t or 'customer/view' in t
+
 @dp.message(F.chat.type == "private")
 async def process_payment(message: types.Message):
     if not message.text or message.chat.type != "private":
@@ -1287,54 +1317,65 @@ async def process_payment(message: types.Message):
         "⚠️ Ուշադրություն դարձրեք, որ գումարը պետք է լինի միայն թվերով, իսկ եղանակը՝ նշված տարբերակներից մեկը։"
     )
 
-    # URL Handle
-    if text.startswith('http') and 'customer/view?id=' in text:
-        if message.from_user.id in PENDING_PAYMENTS:
-            customer_id_str = text.split('id=')[-1].split('&')[0]
-            if not customer_id_str.isdigit():
-                await message.answer("❌ Սխալ հղում:")
-                return
-            customer_id = int(customer_id_str)
-            pending = PENDING_PAYMENTS.pop(message.from_user.id)
-            
-            await message.answer("🔄 Կապվում եմ Alfa CRM-ի հետ...")
-            customer = await get_alfacrm_customer_by_id(customer_id)
-            if not customer:
-                await message.answer("❌ Աշակերտը չգտնվեց նշված հղումով:")
-                return
-                
-            payer_name = customer.get("legal_name") or customer.get("name", "Անհայտ")
-            success = await create_alfacrm_payment(customer_id, pending['amount'], pending['method_raw'], payer_name)
-            
-            if success:
-                await message.answer(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում ({customer.get('name')}):")
-                if GROUP_CHAT_ID:
-                    try:
-                        chat_id_int = int(GROUP_CHAT_ID)
-                        thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
-                        await bot.send_message(
-                            chat_id_int, pending['response_text'], message_thread_id=thread_id_int
-                        )
-                    except Exception as e:
-                        print(f"Failed to send to group: {e}")
-            else:
-                await message.answer("❌ Սխալ տեղի ունեցավ CRM-ում վճարումը գրանցելիս:")
-        else:
-            await message.answer("❌ Դուք չունեք սպասվող վճարում:")
-        return
-
     parts = text.split()
-    if len(parts) < 3:
-        await message.answer(ERROR_INSTRUCTION, parse_mode="Markdown")
-        return
+    is_valid_payment_cmd = False
+    if len(parts) >= 3:
+        payment_method_raw = parts[-1].lower()
+        payment_sum = parts[-2]
+        clean_sum = payment_sum.replace('.', '').replace(',', '')
+        if payment_method_raw in PAYMENT_METHODS and clean_sum.isdigit():
+            is_valid_payment_cmd = True
 
-    payment_method_raw = parts[-1].lower()
-    payment_sum = parts[-2]
-    clean_sum = payment_sum.replace('.', '').replace(',', '')
-    
-    if payment_method_raw not in PAYMENT_METHODS or not clean_sum.isdigit():
-        await message.answer(ERROR_INSTRUCTION, parse_mode="Markdown")
-        return
+    if not is_valid_payment_cmd:
+        # User is replying with link or ID for pending payment
+        if message.from_user.id in PENDING_PAYMENTS:
+            customer_id = extract_customer_id(text)
+            if customer_id is not None:
+                pending = PENDING_PAYMENTS.pop(message.from_user.id)
+                
+                processing_msg = await message.answer("🔄 Կապվում եմ Alfa CRM-ի հետ...")
+                customer = await get_alfacrm_customer_by_id(customer_id)
+                if not customer:
+                    await processing_msg.edit_text("❌ Աշակերտը չգտնվեց նշված CRM ID-ով/հղումով:")
+                    PENDING_PAYMENTS[message.from_user.id] = pending
+                    return
+                    
+                payer_name = customer.get("legal_name") or customer.get("name", "Անհայտ")
+                success = await create_alfacrm_payment(customer_id, pending['amount'], pending['method_raw'], payer_name)
+                
+                if success:
+                    await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում ({customer.get('name')}):\n\n{pending['response_text']}")
+                    if GROUP_CHAT_ID:
+                        try:
+                            chat_id_int = int(GROUP_CHAT_ID)
+                            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+                            await bot.send_message(
+                                chat_id_int, pending['response_text'], message_thread_id=thread_id_int
+                            )
+                        except Exception as e:
+                            print(f"Failed to send to group: {e}")
+                else:
+                    await processing_msg.edit_text("❌ Սխալ տեղի ունեցավ CRM-ում վճարումը գրանցելիս:")
+                return
+            else:
+                await message.answer(
+                    "❌ Չհաջողվեց գտնել աշակերտի ID-ն:\n"
+                    "Խնդրում ենք ուղարկել ճիշտ CRM անկետայի հղումը (օրինակ՝ `https://.../customer/view?id=12345`) կամ աշակերտի ID-ն:",
+                    parse_mode="Markdown"
+                )
+                return
+        else:
+            if is_url_or_link(text):
+                await message.answer(
+                    "❌ Դուք չունեք սպասվող վճարում:\n\n"
+                    "Վճարումը գրանցելու համար խնդրում ենք գրել ճիշտ հերթականությամբ՝\n"
+                    "👉 `Անուն Ազգանուն Գումար Եղանակ`",
+                    parse_mode="Markdown"
+                )
+                return
+            else:
+                await message.answer(ERROR_INSTRUCTION, parse_mode="Markdown")
+                return
 
     amount_int = int(clean_sum)
     name_english = " ".join(parts[:-2])
