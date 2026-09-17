@@ -1135,7 +1135,7 @@ async def callback_complete_task(callback: types.CallbackQuery):
         
     await callback.message.edit_text(response, parse_mode="Markdown", reply_markup=builder.as_markup())
 
-@dp.message(F.text.regexp(r'^(?i)/task(\d+)$'))
+@dp.message(F.text.regexp(r'(?i)^/task(\d+)$'))
 async def cmd_complete_task_number(message: types.Message):
     match = re.match(r'(?i)^/task(\d+)$', message.text)
     if not match:
