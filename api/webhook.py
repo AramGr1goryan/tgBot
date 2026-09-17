@@ -1053,20 +1053,25 @@ async def cmd_addtask(message: types.Message):
     await message.answer("Առաջադրանքը ավելացված է:")
 
     user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-    
-    # Send notification about the new task to the group chat so everyone sees it
-    if GROUP_CHAT_ID:
+    task_msg = f"📌 **Նոր առաջադրանք!**\n\n👤 Ավելացրեց՝ {user_info}\n🔹 {task_description}"
+
+    # Get all users who use the bot (from Postgres & memory) to send them private notification
+    target_users = set(KNOWN_USERS).union(EXECUTORS.keys())
+    if POSTGRES_URL:
         try:
-            chat_id_int = int(GROUP_CHAT_ID)
-            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
-            await bot.send_message(
-                chat_id_int,
-                f"📌 **Նոր առաջադրանք!**\n\n👤 Ավելացրեց՝ {user_info}\n🔹 {task_description}",
-                message_thread_id=thread_id_int,
-                parse_mode="Markdown"
-            )
+            conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+            rows = await conn.fetch("SELECT user_id FROM all_users UNION SELECT user_id FROM executors")
+            await conn.close()
+            for r in rows:
+                target_users.add(r['user_id'])
         except Exception as e:
-            print(f"Failed to send task notification to group: {e}")
+            print(f"Failed to fetch users for addtask notification: {e}")
+
+    for u_id in target_users:
+        try:
+            await bot.send_message(u_id, task_msg, parse_mode="Markdown")
+        except Exception as e:
+            print(f"Failed to send task notification to user {u_id}: {e}")
 
 @dp.message(Command("checktasks"))
 async def cmd_checktasks(message: types.Message):
@@ -1106,26 +1111,12 @@ async def callback_complete_task(callback: types.CallbackQuery):
         
         notify_text = f"✅ **Առաջադրանքը կատարվել է!**\n\n👤 Կատարեց՝ {user_info}\n🔹 **Task{task_id}** — {task_desc}"
         
-        # Send completion notifications to Lusine (6062763343), Hripsime (5636022981), and Aram (1472817960)
+        # Send completion notifications ONLY to Lusine (6062763343), Hripsime (5636022981), and Aram (1472817960)
         for u_id in TASK_NOTIFY_USERS:
             try:
                 await bot.send_message(u_id, notify_text, parse_mode="Markdown")
             except Exception as e:
                 print(f"Failed to send task completion notification to {u_id}: {e}")
-                
-        # Send to group as well
-        if GROUP_CHAT_ID:
-            try:
-                chat_id_int = int(GROUP_CHAT_ID)
-                thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
-                await bot.send_message(
-                    chat_id_int,
-                    notify_text,
-                    message_thread_id=thread_id_int,
-                    parse_mode="Markdown"
-                )
-            except Exception as e:
-                print(f"Failed to send completion notify to group: {e}")
                 
     tasks = await get_tasks()
     if not tasks:
@@ -1162,24 +1153,12 @@ async def cmd_complete_task_number(message: types.Message):
     user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
     notify_text = f"✅ **Առաջադրանքը կատարվել է!**\n\n👤 Կատարեց՝ {user_info}\n🔹 **Task{task_id}** — {task_desc}"
     
+    # Send completion notifications ONLY to Lusine (6062763343), Hripsime (5636022981), and Aram (1472817960)
     for u_id in TASK_NOTIFY_USERS:
         try:
             await bot.send_message(u_id, notify_text, parse_mode="Markdown")
         except Exception as e:
             print(f"Failed to send task completion notification to {u_id}: {e}")
-            
-    if GROUP_CHAT_ID:
-        try:
-            chat_id_int = int(GROUP_CHAT_ID)
-            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
-            await bot.send_message(
-                chat_id_int,
-                notify_text,
-                message_thread_id=thread_id_int,
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            print(f"Failed to send completion notify to group: {e}")
 
 @dp.message(Command("task"))
 async def cmd_task_hint(message: types.Message):
