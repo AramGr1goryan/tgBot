@@ -89,6 +89,27 @@ STRUCTURED_SCHEDULE = {
     6: []
 }
 
+_db_pool = None
+_http_client = None
+
+def get_http_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(timeout=8.0)
+    return _http_client
+
+async def get_db_pool():
+    global _db_pool
+    if not POSTGRES_URL:
+        return None
+    if _db_pool is None:
+        try:
+            _db_pool = await asyncpg.create_pool(POSTGRES_URL, ssl='require', min_size=1, max_size=4, command_timeout=5.0)
+        except Exception as e:
+            print(f"Failed to create db pool: {e}")
+            return None
+    return _db_pool
+
 _alfacrm_token = None
 _alfacrm_token_expires = 0
 
@@ -98,7 +119,8 @@ async def get_alfacrm_token():
     if _alfacrm_token and now < _alfacrm_token_expires:
         return _alfacrm_token
         
-    async with httpx.AsyncClient() as client:
+    client = get_http_client()
+    try:
         resp = await client.post(
             "https://robixlab.s20.online/v2api/auth/login",
             json={"email": ALFACRM_EMAIL, "api_key": ALFACRM_API_KEY}
@@ -111,6 +133,9 @@ async def get_alfacrm_token():
         _alfacrm_token = data.get("token")
         _alfacrm_token_expires = now + 7200 # 2 hours
         return _alfacrm_token
+    except Exception as e:
+        print(f"ALFACRM AUTH EXCEPTION: {e}")
+        return None
 
 def _parse_lessons(items, tz):
     now = datetime.now(tz)
@@ -480,63 +505,58 @@ async def ensure_db():
     global db_initialized, BANNED_USERS
     if db_initialized or not POSTGRES_URL:
         return
-    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
-    await conn.execute('''CREATE TABLE IF NOT EXISTS tasks
-                 (id SERIAL PRIMARY KEY, description TEXT)''')
-    # Таблицы для Lego
-    await conn.execute('''CREATE TABLE IF NOT EXISTS lego_groups
-                 (id SERIAL PRIMARY KEY, name TEXT UNIQUE)''')
-    await conn.execute('''CREATE TABLE IF NOT EXISTS lego_themes
-                 (id SERIAL PRIMARY KEY, group_id INTEGER REFERENCES lego_groups(id) ON DELETE CASCADE, name TEXT)''')
-    
-    # Таблица для заблокированных пользователей
-    await conn.execute('''CREATE TABLE IF NOT EXISTS banned_users
-                 (user_id BIGINT PRIMARY KEY)''')
-                 
-    # Таблица для исполнителей (кассиров)
-    await conn.execute('''CREATE TABLE IF NOT EXISTS executors
-                 (user_id BIGINT PRIMARY KEY, name TEXT)''')
-                 
-    # Таблица для абсолютно всех пользователей, кто хоть раз написал боту
-    await conn.execute('''CREATE TABLE IF NOT EXISTS all_users
-                 (user_id BIGINT PRIMARY KEY, username TEXT, full_name TEXT)''')
-                 
-    # Загружаем забаненных пользователей в память при холодном старте
-    rows = await conn.fetch("SELECT user_id FROM banned_users")
-    BANNED_USERS = {row['user_id'] for row in rows}
-    
-    # Загружаем имена исполнителей в память
-    exec_rows = await conn.fetch("SELECT user_id, name FROM executors")
-    for row in exec_rows:
-        EXECUTORS[row['user_id']] = row['name']
-        
-    # Загружаем всех пользователей, чтобы не делать лишних инсертов
-    known_rows = await conn.fetch("SELECT user_id FROM all_users")
-    for row in known_rows:
-        KNOWN_USERS.add(row['user_id'])
-    
-    await conn.close()
-    db_initialized = True
+    pool = await get_db_pool()
+    if not pool: return
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute('''CREATE TABLE IF NOT EXISTS tasks
+                         (id SERIAL PRIMARY KEY, description TEXT)''')
+            await conn.execute('''CREATE TABLE IF NOT EXISTS lego_groups
+                         (id SERIAL PRIMARY KEY, name TEXT UNIQUE)''')
+            await conn.execute('''CREATE TABLE IF NOT EXISTS lego_themes
+                         (id SERIAL PRIMARY KEY, group_id INTEGER REFERENCES lego_groups(id) ON DELETE CASCADE, name TEXT)''')
+            await conn.execute('''CREATE TABLE IF NOT EXISTS banned_users
+                         (user_id BIGINT PRIMARY KEY)''')
+            await conn.execute('''CREATE TABLE IF NOT EXISTS executors
+                         (user_id BIGINT PRIMARY KEY, name TEXT)''')
+            await conn.execute('''CREATE TABLE IF NOT EXISTS all_users
+                         (user_id BIGINT PRIMARY KEY, username TEXT, full_name TEXT)''')
+                         
+            rows = await conn.fetch("SELECT user_id FROM banned_users")
+            BANNED_USERS = {row['user_id'] for row in rows}
+            
+            exec_rows = await conn.fetch("SELECT user_id, name FROM executors")
+            for row in exec_rows:
+                EXECUTORS[row['user_id']] = row['name']
+                
+            known_rows = await conn.fetch("SELECT user_id FROM all_users")
+            for row in known_rows:
+                KNOWN_USERS.add(row['user_id'])
+            
+            db_initialized = True
+    except Exception as e:
+        print(f"ensure_db error: {e}")
 
 async def add_task(description: str):
-    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
-    await conn.execute("INSERT INTO tasks (description) VALUES ($1)", description)
-    await conn.close()
+    pool = await get_db_pool()
+    if pool:
+        async with pool.acquire() as conn:
+            await conn.execute("INSERT INTO tasks (description) VALUES ($1)", description)
 
 async def get_tasks():
-    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
-    rows = await conn.fetch("SELECT id, description FROM tasks ORDER BY id")
-    await conn.close()
-    return rows
+    pool = await get_db_pool()
+    if not pool: return []
+    async with pool.acquire() as conn:
+        return await conn.fetch("SELECT id, description FROM tasks ORDER BY id")
 
 async def delete_task(task_id: int):
-    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
-    row = await conn.fetchrow("SELECT description FROM tasks WHERE id = $1", task_id)
-    if row:
-        await conn.execute("DELETE FROM tasks WHERE id = $1", task_id)
-        await conn.close()
-        return row['description']
-    await conn.close()
+    pool = await get_db_pool()
+    if not pool: return None
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT description FROM tasks WHERE id = $1", task_id)
+        if row:
+            await conn.execute("DELETE FROM tasks WHERE id = $1", task_id)
+            return row['description']
     return None
 
 def transliterate_name(text: str) -> str:
@@ -1803,20 +1823,23 @@ async def webhook(request: Request):
                 username = user_obj.username or ""
                 full_name = user_obj.full_name or ""
                 
-                conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
-                await conn.execute(
-                    "INSERT INTO all_users (user_id, username, full_name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
-                    user_id, username, full_name
-                )
-                await conn.close()
+                pool = await get_db_pool()
+                if pool:
+                    try:
+                        async with pool.acquire() as conn:
+                            await conn.execute(
+                                "INSERT INTO all_users (user_id, username, full_name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+                                user_id, username, full_name
+                            )
+                    except Exception as e:
+                        print(f"Error saving user: {e}")
                 KNOWN_USERS.add(user_id)
         
-        import asyncio
         print("Starting dp.feed_update")
-        await asyncio.wait_for(dp.feed_update(bot, update), timeout=8.0)
+        await asyncio.wait_for(dp.feed_update(bot, update), timeout=12.0)
         print("Finished dp.feed_update successfully")
     except asyncio.TimeoutError:
-        print("CRITICAL ERROR: Timeout! The process hung for more than 8 seconds.")
+        print("CRITICAL ERROR: Timeout! The process hung for more than 12 seconds.")
         return {"error": "Timeout"}
     except Exception as e:
         print(f"CRITICAL ERROR: {repr(e)}")
@@ -1825,6 +1848,12 @@ async def webhook(request: Request):
         return {"error": str(e)}
         
     return {"status": "ok"}
+
+@app.get("/api/cron/warmup")
+async def cron_warmup():
+    await ensure_db()
+    await get_alfacrm_token()
+    return {"status": "warmed", "time": datetime.now().isoformat()}
 
 @app.get("/api/cron/teachers")
 async def cron_teachers():
