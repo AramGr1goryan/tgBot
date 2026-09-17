@@ -217,7 +217,7 @@ async def get_alfacrm_customer_by_name(name: str):
                 if items:
                     return items[0]
         except Exception as e:
-            print(f"Error searching customer'{search_n}': {e}")
+            print(f"Error searching customer '{search_n}': {e}")
             
     words = [w for w in clean_name.split() if len(w) >= 2]
     rus_words = [w for w in rus_name.split() if len(w) >= 2]
