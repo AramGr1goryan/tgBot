@@ -1258,9 +1258,9 @@ async def process_theme_selection(message: types.Message):
     else:
         await message.answer(f"❌ «{theme_choice}» թեման չի գտնվել «{group_name}» խմբում։ Համոզվեք, որ այն ճիշտ եք գրել։")
 
-@dp.message()
+@dp.message(F.chat.type == "private")
 async def process_payment(message: types.Message):
-    if not message.text:
+    if not message.text or message.chat.type != "private":
         return
         
     text = message.text.strip()
