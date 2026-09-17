@@ -202,45 +202,43 @@ async def get_alfacrm_customer_by_name(name: str):
     payloads = [
         {"name": clean_name, "is_study": [0, 1, 2]},
         {"name": clean_name, "is_study": 0},
-        {"name": clean_name, "is_study": 1},
-        {"name": clean_name}
+        {"name": clean_name, "is_study": 1}
     ]
     
-    async with httpx.AsyncClient() as client:
-        for payload in payloads:
+    client = get_http_client()
+    for payload in payloads:
+        try:
+            response = await client.post(
+                "https://robixlab.s20.online/v2api/1/customer/index",
+                headers=headers,
+                json=payload,
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                items = response.json().get("items", [])
+                if items:
+                    return items[0]
+        except Exception as e:
+            print(f"Error searching customer: {e}")
+            
+    if len(words) > 1:
+        for word in words:
             try:
                 response = await client.post(
                     "https://robixlab.s20.online/v2api/1/customer/index",
                     headers=headers,
-                    json=payload,
-                    timeout=10.0
+                    json={"name": word, "is_study": [0, 1, 2]},
+                    timeout=5.0
                 )
                 if response.status_code == 200:
                     items = response.json().get("items", [])
-                    if items:
-                        return items[0]
+                    other_words = [w.lower() for w in words if w.lower() != word.lower()]
+                    for item in items:
+                        item_name = item.get("name", "").lower()
+                        if any(ow in item_name for ow in other_words) or len(items) == 1:
+                            return item
             except Exception as e:
-                print(f"Error searching customer: {e}")
-                
-        if len(words) > 1:
-            for word in words:
-                for is_study_val in [[0, 1, 2], 0, 1]:
-                    try:
-                        response = await client.post(
-                            "https://robixlab.s20.online/v2api/1/customer/index",
-                            headers=headers,
-                            json={"name": word, "is_study": is_study_val},
-                            timeout=10.0
-                        )
-                        if response.status_code == 200:
-                            items = response.json().get("items", [])
-                            other_words = [w.lower() for w in words if w.lower() != word.lower()]
-                            for item in items:
-                                item_name = item.get("name", "").lower()
-                                if any(ow in item_name for ow in other_words) or len(items) == 1:
-                                    return item
-                    except Exception as e:
-                        print(f"Error searching candidate word '{word}': {e}")
+                print(f"Error searching candidate word '{word}': {e}")
             
     return None
 
@@ -257,25 +255,24 @@ async def get_alfacrm_customer_by_id(customer_id: int):
     payloads = [
         {"id": customer_id, "is_study": [0, 1, 2]},
         {"id": customer_id, "is_study": 0},
-        {"id": customer_id, "is_study": 1},
-        {"id": customer_id}
+        {"id": customer_id, "is_study": 1}
     ]
     
-    async with httpx.AsyncClient() as client:
-        for payload in payloads:
-            try:
-                response = await client.post(
-                    "https://robixlab.s20.online/v2api/1/customer/index",
-                    headers=headers,
-                    json=payload,
-                    timeout=10.0
-                )
-                if response.status_code == 200:
-                    items = response.json().get("items", [])
-                    if items:
-                        return items[0]
-            except Exception as e:
-                print(f"Error fetching customer by ID: {e}")
+    client = get_http_client()
+    for payload in payloads:
+        try:
+            response = await client.post(
+                "https://robixlab.s20.online/v2api/1/customer/index",
+                headers=headers,
+                json=payload,
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                items = response.json().get("items", [])
+                if items:
+                    return items[0]
+        except Exception as e:
+            print(f"Error fetching customer by ID: {e}")
             
     return None
 
@@ -289,27 +286,27 @@ async def check_customer_rooms(customer_id: int) -> bool:
         "Content-Type": "application/json"
     }
     
-    async with httpx.AsyncClient() as client:
-        payload = {"customer_id": customer_id}
-        try:
-            response = await client.post(
-                "https://robixlab.s20.online/v2api/1/lesson/index",
-                headers=headers,
-                json=payload,
-                timeout=10.0
-            )
-            if response.status_code == 200:
-                items = response.json().get("items", [])
-                for lesson in items:
-                    if lesson.get("room_id") in [33, 34]:
-                        return True
-        except Exception as e:
-            print(f"Error checking rooms: {e}")
+    client = get_http_client()
+    payload = {"customer_id": customer_id}
+    try:
+        response = await client.post(
+            "https://robixlab.s20.online/v2api/1/lesson/index",
+            headers=headers,
+            json=payload,
+            timeout=5.0
+        )
+        if response.status_code == 200:
+            items = response.json().get("items", [])
+            for lesson in items:
+                if lesson.get("room_id") in [33, 34]:
+                    return True
+    except Exception as e:
+        print(f"Error checking rooms: {e}")
     return False
 
-async def get_alfacrm_group_by_name(group_name: str):
+async def get_all_alfacrm_groups():
     token = await get_alfacrm_token()
-    if not token: return None
+    if not token: return []
     
     headers = {
         "X-ALFACRM-TOKEN": token,
@@ -317,29 +314,45 @@ async def get_alfacrm_group_by_name(group_name: str):
         "Content-Type": "application/json"
     }
     
-    clean_group = group_name.strip()
+    client = get_http_client()
+    try:
+        resp = await client.post(
+            "https://robixlab.s20.online/v2api/1/group/index",
+            headers=headers,
+            json={"page": 0, "per-page": 100},
+            timeout=5.0
+        )
+        if resp.status_code == 200:
+            return resp.json().get("items", [])
+    except Exception as e:
+        print(f"Error fetching all groups: {e}")
+    return []
+
+def find_group_in_list(group_query: str, all_groups: list):
+    clean = group_query.strip().lower()
+    if not clean: return None
     
-    async with httpx.AsyncClient() as client:
-        for payload in [{"name": clean_group}, {"name": clean_group, "is_main": 1}, {}]:
-            try:
-                resp = await client.post(
-                    "https://robixlab.s20.online/v2api/1/group/index",
-                    headers=headers,
-                    json=payload,
-                    timeout=10.0
-                )
-                if resp.status_code == 200:
-                    items = resp.json().get("items", [])
-                    for g in items:
-                        if clean_group.lower() == g.get("name", "").strip().lower():
-                            return g
-                    for g in items:
-                        if clean_group.lower() in g.get("name", "").strip().lower():
-                            return g
-            except Exception as e:
-                print(f"Error searching group '{clean_group}': {e}")
-                
+    for g in all_groups:
+        g_name = g.get("name", "").strip().lower()
+        if clean == g_name:
+            return g
+            
+    for g in all_groups:
+        g_name = g.get("name", "").strip().lower()
+        if clean in g_name:
+            return g
+            
+    q_words = clean.split()
+    for g in all_groups:
+        g_name = g.get("name", "").strip().lower()
+        if all(w in g_name for w in q_words):
+            return g
+            
     return None
+
+async def get_alfacrm_group_by_name(group_name: str):
+    all_groups = await get_all_alfacrm_groups()
+    return find_group_in_list(group_name, all_groups)
 
 async def add_customer_to_alfacrm_group(group_id: int, customer_id: int, group_obj: dict = None):
     token = await get_alfacrm_token()
