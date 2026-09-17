@@ -560,6 +560,8 @@ async def check_uncompleted_lessons(bot: Bot, exclude_ids=None, override_ids=Non
                 )
                 if response.status_code == 200:
                     items = response.json().get("items", [])
+                    # Skip empty groups (no customers assigned)
+                    items = [i for i in items if i.get("customer_ids") or i.get("details")]
                     if items:
                         count = len(items)
                         
@@ -653,6 +655,10 @@ async def cmd_myschedule(message: types.Message):
     items.sort(key=lambda x: x.get("time_from", ""))
     
     for item in items:
+        # Skip empty groups
+        if not item.get("customer_ids") and not item.get("details"):
+            continue
+            
         date_str = item.get("date")
         time_from = item.get("time_from", "")[-8:-3]
         time_to = item.get("time_to", "")[-8:-3]
