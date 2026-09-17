@@ -656,8 +656,8 @@ async def cmd_myschedule(message: types.Message):
         date_str = item.get("date")
         time_from = item.get("time_from", "")[-8:-3]
         time_to = item.get("time_to", "")[-8:-3]
-        room = ROOMS_MAP.get(item.get("room_id"), "Անհայտ")
-        subject = SUBJECTS_MAP.get(item.get("subject_id"), "Անհայտ")
+        room = ROOMS_MAP.get(item.get("room_id"), "Անհայտ").replace("*", "").replace("_", "").replace("[", "").replace("]", "")
+        subject = SUBJECTS_MAP.get(item.get("subject_id"), "Անհայտ").replace("*", "").replace("_", "").replace("[", "").replace("]", "")
         
         lesson_text = f"🕒 {time_from} - {time_to} | 🏫 {room} | 📚 {subject}"
         
@@ -666,19 +666,19 @@ async def cmd_myschedule(message: types.Message):
         elif date_str == date_to:
             schedule_tomorrow.append(lesson_text)
             
-    response_text = f"📅 **{teacher['name']} - Գրաֆիկ**\n\n"
+    response_text = f"📅 <b>{teacher['name']} - Գրաֆիկ</b>\n\n"
     
     if schedule_today:
-        response_text += "🔹 **Այսօր**\n" + "\n".join(schedule_today) + "\n\n"
+        response_text += "🔹 <b>Այսօր</b>\n" + "\n".join(schedule_today) + "\n\n"
     else:
-        response_text += "🔹 **Այսօր:** Դասեր չկան\n\n"
+        response_text += "🔹 <b>Այսօր:</b> Դասեր չկան\n\n"
         
     if schedule_tomorrow:
-        response_text += "🔹 **Վաղը**\n" + "\n".join(schedule_tomorrow)
+        response_text += "🔹 <b>Վաղը</b>\n" + "\n".join(schedule_tomorrow)
     else:
-        response_text += "🔹 **Վաղը:** Դասեր չկան"
+        response_text += "🔹 <b>Վաղը:</b> Դասեր չկան"
         
-    await message.answer(response_text, parse_mode="Markdown")
+    await message.answer(response_text, parse_mode="HTML")
 
 @dp.message(Command("prob"))
 async def cmd_prob(message: types.Message):
