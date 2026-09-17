@@ -170,23 +170,28 @@ async def get_alfacrm_customer_by_name(name: str):
         "Content-Type": "application/json"
     }
     
-    # Փնտրում ենք անունով
+    payloads = [
+        {"name": name, "is_study": [0, 1, 2]},
+        {"name": name, "is_study": 0},
+        {"name": name, "is_study": 1},
+        {"name": name}
+    ]
+    
     async with httpx.AsyncClient() as client:
-        payload = {"name": name}
-        try:
-            response = await client.post(
-                "https://robixlab.s20.online/v2api/1/customer/index",
-                headers=headers,
-                json=payload,
-                timeout=10.0
-            )
-            if response.status_code == 200:
-                data = response.json()
-                items = data.get("items", [])
-                if items:
-                    return items[0]
-        except Exception as e:
-            print(f"Error searching customer: {e}")
+        for payload in payloads:
+            try:
+                response = await client.post(
+                    "https://robixlab.s20.online/v2api/1/customer/index",
+                    headers=headers,
+                    json=payload,
+                    timeout=10.0
+                )
+                if response.status_code == 200:
+                    items = response.json().get("items", [])
+                    if items:
+                        return items[0]
+            except Exception as e:
+                print(f"Error searching customer: {e}")
             
     return None
 
@@ -200,19 +205,29 @@ async def get_alfacrm_customer_by_id(customer_id: int):
         "Content-Type": "application/json"
     }
     
+    payloads = [
+        {"id": customer_id, "is_study": [0, 1, 2]},
+        {"id": customer_id, "is_study": 0},
+        {"id": customer_id, "is_study": 1},
+        {"id": customer_id}
+    ]
+    
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(
-                "https://robixlab.s20.online/v2api/1/customer/index",
-                headers=headers,
-                json={"id": customer_id},
-                timeout=10.0
-            )
-            if response.status_code == 200:
-                items = response.json().get("items", [])
-                if items: return items[0]
-        except Exception:
-            pass
+        for payload in payloads:
+            try:
+                response = await client.post(
+                    "https://robixlab.s20.online/v2api/1/customer/index",
+                    headers=headers,
+                    json=payload,
+                    timeout=10.0
+                )
+                if response.status_code == 200:
+                    items = response.json().get("items", [])
+                    if items:
+                        return items[0]
+            except Exception as e:
+                print(f"Error fetching customer by ID: {e}")
+            
     return None
 
 async def check_customer_rooms(customer_id: int) -> bool:
@@ -1272,8 +1287,8 @@ def extract_customer_id(text: str) -> int | None:
     if match_id:
         return int(match_id.group(1))
         
-    # customer/view path with ID: /customer/view/8372 or /customer/view?id=8372 or /customer/view...8372
-    match_view = re.search(r'customer/view.*?(\d+)', text, re.IGNORECASE)
+    # customer/view or lead/view path with ID: /customer/view?id=8372 or /lead/view?id=8372
+    match_view = re.search(r'(?:customer|lead)/view.*?(\d+)', text, re.IGNORECASE)
     if match_view:
         return int(match_view.group(1))
 
@@ -1286,7 +1301,7 @@ def extract_customer_id(text: str) -> int | None:
 
 def is_url_or_link(text: str) -> bool:
     t = text.lower()
-    return 'http://' in t or 'https://' in t or 's20.online' in t or 'alfacrm' in t or 'customer/view' in t
+    return 'http://' in t or 'https://' in t or 's20.online' in t or 'alfacrm' in t or 'customer/view' in t or 'lead/view' in t
 
 @dp.message(F.chat.type == "private")
 async def process_payment(message: types.Message):
