@@ -21,6 +21,7 @@ TOPIC_THREAD_ID = os.getenv("TOPIC_THREAD_ID")
 ALFACRM_EMAIL = (os.getenv("ALFACRM_EMAIL") or "").strip()
 ALFACRM_API_KEY = (os.getenv("ALFACRM_API_KEY") or "").strip()
 ADMIN_ID = 1472817960
+TASK_NOTIFY_USERS = [1472817960, 6062763343, 5636022981]
 
 bot = Bot(token=API_TOKEN) if API_TOKEN else None
 dp = Dispatcher()
@@ -170,11 +171,14 @@ async def get_alfacrm_customer_by_name(name: str):
         "Content-Type": "application/json"
     }
     
+    clean_name = name.strip()
+    words = [w for w in clean_name.split() if len(w) >= 2]
+    
     payloads = [
-        {"name": name, "is_study": [0, 1, 2]},
-        {"name": name, "is_study": 0},
-        {"name": name, "is_study": 1},
-        {"name": name}
+        {"name": clean_name, "is_study": [0, 1, 2]},
+        {"name": clean_name, "is_study": 0},
+        {"name": clean_name, "is_study": 1},
+        {"name": clean_name}
     ]
     
     async with httpx.AsyncClient() as client:
@@ -192,6 +196,26 @@ async def get_alfacrm_customer_by_name(name: str):
                         return items[0]
             except Exception as e:
                 print(f"Error searching customer: {e}")
+                
+        if len(words) > 1:
+            for word in words:
+                for is_study_val in [[0, 1, 2], 0, 1]:
+                    try:
+                        response = await client.post(
+                            "https://robixlab.s20.online/v2api/1/customer/index",
+                            headers=headers,
+                            json={"name": word, "is_study": is_study_val},
+                            timeout=10.0
+                        )
+                        if response.status_code == 200:
+                            items = response.json().get("items", [])
+                            other_words = [w.lower() for w in words if w.lower() != word.lower()]
+                            for item in items:
+                                item_name = item.get("name", "").lower()
+                                if any(ow in item_name for ow in other_words) or len(items) == 1:
+                                    return item
+                    except Exception as e:
+                        print(f"Error searching candidate word '{word}': {e}")
             
     return None
 
@@ -420,8 +444,23 @@ async def delete_task(task_id: int):
     return None
 
 def transliterate_name(text: str) -> str:
+    if re.search(r'[а-яА-ЯеЁ]', text):
+        return text
+
+    text = text.replace('kh', 'х').replace('Kh', 'Х')
+    text = text.replace('gh', 'г').replace('Gh', 'Г')
+    text = text.replace('ph', 'ф').replace('Ph', 'Ф')
+    text = text.replace('sh', 'ш').replace('Sh', 'Ш')
+    text = text.replace('ch', 'ч').replace('Ch', 'Ч')
+    text = text.replace('zh', 'ж').replace('Zh', 'Ж')
+    text = text.replace('ts', 'ц').replace('Ts', 'Ц')
+    text = text.replace('dz', 'дз').replace('Dz', 'Дз')
     text = text.replace('yan', 'ян').replace('Yan', 'Ян')
+    text = text.replace('ian', 'ян').replace('Ian', 'Ян')
     text = text.replace('ya', 'я').replace('Ya', 'Я')
+    text = text.replace('yu', 'ю').replace('Yu', 'Ю')
+    text = text.replace('x', 'х').replace('X', 'Х')
+    
     try:
         return translit(text, 'ru')
     except Exception:
@@ -1000,7 +1039,6 @@ async def cmd_freeprob(message: types.Message):
 
 @dp.message(Command("addtask"))
 async def cmd_addtask(message: types.Message):
-        
     task_description = message.text.replace("/addtask", "", 1).strip()
     if not task_description:
         await message.answer("Խնդրում ենք նշել առաջադրանքի նկարագրությունը: Օրինակ՝ /addtask Ջնջել խումբը")
@@ -1013,6 +1051,22 @@ async def cmd_addtask(message: types.Message):
     await ensure_db()
     await add_task(task_description)
     await message.answer("Առաջադրանքը ավելացված է:")
+
+    user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
+    
+    # Send notification about the new task to the group chat so everyone sees it
+    if GROUP_CHAT_ID:
+        try:
+            chat_id_int = int(GROUP_CHAT_ID)
+            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+            await bot.send_message(
+                chat_id_int,
+                f"📌 **Նոր առաջադրանք!**\n\n👤 Ավելացրեց՝ {user_info}\n🔹 {task_description}",
+                message_thread_id=thread_id_int,
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            print(f"Failed to send task notification to group: {e}")
 
 @dp.message(Command("checktasks"))
 async def cmd_checktasks(message: types.Message):
@@ -1050,8 +1104,28 @@ async def callback_complete_task(callback: types.CallbackQuery):
         await callback.answer(f"✅ Task{task_id} կատարված է։")
         user_info = f"@{callback.from_user.username}" if callback.from_user.username else callback.from_user.full_name
         
-        # Notify the admin (or group) that it was completed
-        await bot.send_message(ADMIN_ID, f"Առաջադրանքը {user_info}-ի կողմից կատարվել է:\nTask{task_id} - {task_desc}")
+        notify_text = f"✅ **Առաջադրանքը կատարվել է!**\n\n👤 Կատարեց՝ {user_info}\n🔹 **Task{task_id}** — {task_desc}"
+        
+        # Send completion notifications to Lusine (6062763343), Hripsime (5636022981), and Aram (1472817960)
+        for u_id in TASK_NOTIFY_USERS:
+            try:
+                await bot.send_message(u_id, notify_text, parse_mode="Markdown")
+            except Exception as e:
+                print(f"Failed to send task completion notification to {u_id}: {e}")
+                
+        # Send to group as well
+        if GROUP_CHAT_ID:
+            try:
+                chat_id_int = int(GROUP_CHAT_ID)
+                thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+                await bot.send_message(
+                    chat_id_int,
+                    notify_text,
+                    message_thread_id=thread_id_int,
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                print(f"Failed to send completion notify to group: {e}")
                 
     tasks = await get_tasks()
     if not tasks:
@@ -1069,6 +1143,43 @@ async def callback_complete_task(callback: types.CallbackQuery):
     builder.adjust(2)
         
     await callback.message.edit_text(response, parse_mode="Markdown", reply_markup=builder.as_markup())
+
+@dp.message(F.text.regexp(r'^(?i)/task(\d+)$'))
+async def cmd_complete_task_number(message: types.Message):
+    match = re.match(r'(?i)^/task(\d+)$', message.text)
+    if not match:
+        return
+    task_id = int(match.group(1))
+    
+    await ensure_db()
+    task_desc = await delete_task(task_id)
+    if not task_desc:
+        await message.answer(f"❌ Task{task_id} չի գտնվել կամ արդեն կատարված է:")
+        return
+        
+    await message.answer(f"✅ Task{task_id} — «{task_desc}» կատարված է:")
+    
+    user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
+    notify_text = f"✅ **Առաջադրանքը կատարվել է!**\n\n👤 Կատարեց՝ {user_info}\n🔹 **Task{task_id}** — {task_desc}"
+    
+    for u_id in TASK_NOTIFY_USERS:
+        try:
+            await bot.send_message(u_id, notify_text, parse_mode="Markdown")
+        except Exception as e:
+            print(f"Failed to send task completion notification to {u_id}: {e}")
+            
+    if GROUP_CHAT_ID:
+        try:
+            chat_id_int = int(GROUP_CHAT_ID)
+            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+            await bot.send_message(
+                chat_id_int,
+                notify_text,
+                message_thread_id=thread_id_int,
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            print(f"Failed to send completion notify to group: {e}")
 
 @dp.message(Command("task"))
 async def cmd_task_hint(message: types.Message):
