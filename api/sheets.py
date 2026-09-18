@@ -10,6 +10,8 @@ def get_creds():
         return None
         
     try:
+        # Some platforms escape newlines in JSON env vars
+        creds_json_str = creds_json_str.replace('\\n', '\n')
         creds_dict = json.loads(creds_json_str)
         creds = Credentials.from_service_account_info(creds_dict)
         scoped = creds.with_scopes([

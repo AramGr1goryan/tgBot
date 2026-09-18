@@ -1469,6 +1469,22 @@ async def cmd_unban(message: types.Message):
         BANNED_USERS.remove(target_id)
     await message.answer(f"✅ Օգտատեր {target_id}-ի բլոկավորումը հանված է:")
 
+@dp.message(Command("testsheet"))
+async def cmd_testsheet(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    await message.answer("🔄 Փորձում եմ կապվել Google Sheets-ի հետ...")
+    from api.sheets import append_payment_to_sheet
+    import traceback
+    try:
+        success, msg = await append_payment_to_sheet("18.09.2026", "Test Testyan", 5000, "n")
+        if success:
+            await message.answer("✅ Google Sheets տվյալների ավելացումը հաջողվեց!")
+        else:
+            await message.answer(f"❌ Սխալ Google Sheets-ում:\n`{msg}`", parse_mode="Markdown")
+    except Exception as e:
+        await message.answer(f"❌ Տեխնիկական սխալ:\n`{traceback.format_exc()}`", parse_mode="Markdown")
+
 @dp.message(Command("sendupdate"))
 async def cmd_sendupdate(message: types.Message):
     if message.from_user.id != ADMIN_ID:
