@@ -66,7 +66,7 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
         # I: Cashless Income (Безналичные)
         # J: Cashless Expense (empty)
         
-        row_data = [
+        row_data_ag = [
             "",               # A
             month,            # B
             date_str,         # C
@@ -74,8 +74,6 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
             student_name,     # E
             cash_income,      # F
             "",               # G
-            "",               # H
-            cashless_income   # I
         ]
         
         # Fetch all values to find the real last row with data
@@ -94,9 +92,17 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
                 
         next_row = last_row_with_data + 1
         
+        # Update columns A through G
         await worksheet.update(
-            values=[row_data],
-            range_name=f"A{next_row}:I{next_row}",
+            values=[row_data_ag],
+            range_name=f"A{next_row}:G{next_row}",
+            value_input_option='USER_ENTERED'
+        )
+        
+        # Update column I separately to avoid touching formulas in column H
+        await worksheet.update(
+            values=[[cashless_income]],
+            range_name=f"I{next_row}:I{next_row}",
             value_input_option='USER_ENTERED'
         )
         return True, f"Success (row {next_row})"
