@@ -1772,8 +1772,9 @@ async def process_payment(message: types.Message):
                 if success:
                     tz = zoneinfo.ZoneInfo("Asia/Yerevan")
                     date_str = datetime.now(tz).strftime("%d.%m.%Y")
-                    await append_payment_to_sheet(date_str, payer_name, pending['amount'], pending['method_raw'])
-                    await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում և ԴԴՍ-ում ({customer.get('name')}):\n\n{pending['response_text']}")
+                    student_name = customer.get("name", "Անհայտ")
+                    await append_payment_to_sheet(date_str, student_name, pending['amount'], pending['method_raw'])
+                    await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում և ԴԴՍ-ում ({student_name}):\n\n{pending['response_text']}")
                     if GROUP_CHAT_ID:
                         try:
                             chat_id_int = int(GROUP_CHAT_ID)
@@ -1850,7 +1851,7 @@ async def process_payment(message: types.Message):
     if success:
         tz = zoneinfo.ZoneInfo("Asia/Yerevan")
         date_str = datetime.now(tz).strftime("%d.%m.%Y")
-        await append_payment_to_sheet(date_str, payer_name, amount_int, payment_method_raw)
+        await append_payment_to_sheet(date_str, customer_name, amount_int, payment_method_raw)
         await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում և ԴԴՍ-ում ({customer_name}):\n\n{response_text}")
         if GROUP_CHAT_ID:
             try:
