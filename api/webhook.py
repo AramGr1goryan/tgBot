@@ -378,6 +378,7 @@ async def create_alfacrm_individual_lesson(date_str: str, time_str: str, subject
         return False, "Invalid date"
         
     date_iso = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+    date_api = f"{day.zfill(2)}.{month.zfill(2)}.{year}"
     
     if len(time_str) == 2:
         time_prefix = f"{time_str}:00"
@@ -388,7 +389,7 @@ async def create_alfacrm_individual_lesson(date_str: str, time_str: str, subject
         
     payload = {
         "lesson_type_id": 3, # Individual Trial
-        "lesson_date": date_iso,
+        "lesson_date": date_api,
         "time_from": time_prefix,
         "duration": 50,
         "subject_id": subject_id,
