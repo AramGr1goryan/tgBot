@@ -325,7 +325,8 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
     else:
         return None
         
-    date_formatted = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+    date_iso = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+    date_api = f"{day.zfill(2)}.{month.zfill(2)}.{year}"
     
     if len(time_str) == 2:
         time_formatted = f"{time_str}:00:00"
@@ -336,12 +337,13 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
     else:
         return None
         
-    datetime_formatted = f"{date_formatted} {time_formatted}"
+    datetime_formatted = f"{date_iso} {time_formatted}"
 
     client = get_http_client()
     payload = {
-        "date_from": date_formatted,
-        "date_to": date_formatted
+        "date_from": date_api,
+        "date_to": date_api,
+        "status": 1 # 1 = planned
     }
     
     try:
@@ -358,7 +360,6 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
                 l_group_id = lesson.get("group_id")
                 l_group_ids = lesson.get("group_ids", [])
                 
-                # In some cases AlfaCRM returns group_ids as a list or a single int
                 is_group_match = False
                 if isinstance(l_group_id, list):
                     is_group_match = group_id in l_group_id
@@ -372,7 +373,7 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
                     continue
                     
                 l_time = lesson.get("time_from", "")
-                if l_time.startswith(f"{date_formatted} {time_prefix}") or l_time == datetime_formatted:
+                if l_time.startswith(f"{date_iso} {time_prefix}") or l_time == datetime_formatted:
                     return lesson
     except Exception as e:
         print(f"Error fetching lesson: {e}")
@@ -756,14 +757,14 @@ async def cmd_addprob(message: types.Message):
         token = await get_alfacrm_token()
         y = datetime.now().year
         parts = date_raw.split('.')
-        d_formatted = f"{y}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+        d_api = f"{parts[0].zfill(2)}.{parts[1].zfill(2)}.{y}"
         
         debug_info = []
         try:
             resp = await client.post(
                 "https://robixlab.s20.online/v2api/1/lesson/index",
                 headers={"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"},
-                json={"date_from": d_formatted, "date_to": d_formatted},
+                json={"date_from": d_api, "date_to": d_api, "status": 1},
                 timeout=5.0
             )
             items = resp.json().get("items", [])
