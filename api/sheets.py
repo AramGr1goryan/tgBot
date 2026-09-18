@@ -10,8 +10,14 @@ def get_creds():
         raise ValueError("GOOGLE_CREDENTIALS env var is missing or empty")
         
     # Some platforms escape newlines in JSON env vars
+    # And some pass literal newlines which breaks strict JSON parsing
     creds_json_str = creds_json_str.replace('\\n', '\n')
-    creds_dict = json.loads(creds_json_str)
+    creds_dict = json.loads(creds_json_str, strict=False)
+    
+    # Ensure private_key has proper newlines for Google Auth
+    if 'private_key' in creds_dict:
+        creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+        
     creds = Credentials.from_service_account_info(creds_dict)
     scoped = creds.with_scopes([
         "https://spreadsheets.google.com/feeds",
