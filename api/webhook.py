@@ -364,20 +364,16 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, subject_id: int):
         
     return None
 
-async def add_customer_to_lesson(lesson_id: int, current_details: list, customer_id: int):
+async def add_customer_to_lesson(lesson_id: int, lesson_obj: dict, customer_id: int):
     token = await get_alfacrm_token()
     if not token: return False, "Token error"
     
-    for det in current_details:
-        if det.get("customer_id") == customer_id:
-            return True, "already_added"
-            
-    new_details = list(current_details)
-    new_details.append({
-        "customer_id": customer_id,
-        "is_attend": 0,
-        "reason_id": None
-    })
+    customer_ids = lesson_obj.get("customer_ids", [])
+    if customer_id in customer_ids:
+        return True, "already_added"
+        
+    new_customer_ids = list(customer_ids)
+    new_customer_ids.append(customer_id)
     
     headers = {"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"}
     client = get_http_client()
@@ -386,7 +382,7 @@ async def add_customer_to_lesson(lesson_id: int, current_details: list, customer
         resp = await client.post(
             f"https://robixlab.s20.online/v2api/1/lesson/update?id={lesson_id}",
             headers=headers,
-            json={"details": new_details},
+            json={"customer_ids": new_customer_ids},
             timeout=10.0
         )
         if resp.status_code == 200:
@@ -770,10 +766,8 @@ async def cmd_addprob(message: types.Message):
         return
         
     lesson_id = lesson.get("id")
-    current_details = lesson.get("details", [])
-    
     # 3. Add to lesson
-    success, result_msg = await add_customer_to_lesson(lesson_id, current_details, customer_id)
+    success, result_msg = await add_customer_to_lesson(lesson_id, lesson, customer_id)
     
     if success:
         if result_msg == "already_added":
@@ -787,7 +781,7 @@ async def cmd_addprob(message: types.Message):
                 f"👤 **Աշակերտ:** {customer_name_full}\n"
                 f"📚 **Դաս:** Փորձնական {lesson_name}\n"
                 f"📅 **Ժամանակ:** {d_formatted} {t_formatted}\n"
-                f"📍 **Լոկացիա:** Գարեգին Նժդեհ (Կոմիտաս)",
+                f"📍 **Լոկացիա:** Գարեգին Նժդեհ",
                 parse_mode="Markdown"
             )
     else:
