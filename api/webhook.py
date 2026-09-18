@@ -751,10 +751,37 @@ async def cmd_addprob(message: types.Message):
     # 2. Find specific lesson
     lesson = await get_alfacrm_lesson(date_raw, time_raw, group_id)
     if not lesson:
+        # Debug: fetch all lessons for that date to see why it failed
+        client = get_http_client()
+        token = await get_alfacrm_token()
         y = datetime.now().year
-        d_formatted = f"{date_raw}.{y}" if len(date_raw.split('.')) == 2 else date_raw
-        t_formatted = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
-        await status_msg.edit_text(f"❌ Փորձնական խմբային դաս «{lesson_name}» նշված ժամին ({d_formatted} {t_formatted}) չգտնվեց:")
+        parts = date_raw.split('.')
+        d_formatted = f"{y}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+        
+        debug_info = []
+        try:
+            resp = await client.post(
+                "https://robixlab.s20.online/v2api/1/lesson/index",
+                headers={"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"},
+                json={"date_from": d_formatted, "date_to": d_formatted},
+                timeout=5.0
+            )
+            items = resp.json().get("items", [])
+            for item in items:
+                # filter to lesson_type_id 9 or just show all
+                l_type = item.get("lesson_type_id")
+                g_id = item.get("group_id")
+                g_ids = item.get("group_ids")
+                t_from = item.get("time_from")
+                if l_type in [3, 9]:
+                    debug_info.append(f"ID: {item.get('id')}, Time: {t_from}, Group: {g_id}, Groups: {g_ids}")
+        except Exception as e:
+            debug_info.append(f"Error fetching debug: {e}")
+            
+        debug_str = "\n".join(debug_info)
+        d_f = f"{date_raw}.{y}" if len(parts) == 2 else date_raw
+        t_f = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
+        await status_msg.edit_text(f"❌ Փորձնական խմբային դաս «{lesson_name}» նշված ժամին ({d_f} {t_f}) չգտնվեց:\n\n**Առկա դասեր այս օրը (Տիպ 3/9):**\n`{debug_str}`")
         return
         
     lesson_id = lesson.get("id")
