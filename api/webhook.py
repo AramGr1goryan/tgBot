@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 import asyncio
 import zoneinfo
 import httpx
+from api.sheets import append_payment_to_sheet
+
 
 API_TOKEN = os.getenv("BOT_TOKEN")
 POSTGRES_URL = os.getenv("POSTGRES_URL")
@@ -1752,7 +1754,10 @@ async def process_payment(message: types.Message):
                 success = await create_alfacrm_payment(customer_id, pending['amount'], pending['method_raw'], payer_name)
                 
                 if success:
-                    await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում ({customer.get('name')}):\n\n{pending['response_text']}")
+                    tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+                    date_str = datetime.now(tz).strftime("%d.%m.%Y")
+                    await append_payment_to_sheet(date_str, payer_name, pending['amount'], pending['method_raw'])
+                    await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում և ԴԴՍ-ում ({customer.get('name')}):\n\n{pending['response_text']}")
                     if GROUP_CHAT_ID:
                         try:
                             chat_id_int = int(GROUP_CHAT_ID)
@@ -1827,7 +1832,10 @@ async def process_payment(message: types.Message):
     success = await create_alfacrm_payment(customer_id, amount_int, payment_method_raw, payer_name)
     
     if success:
-        await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում ({customer_name}):\n\n{response_text}")
+        tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+        date_str = datetime.now(tz).strftime("%d.%m.%Y")
+        await append_payment_to_sheet(date_str, payer_name, amount_int, payment_method_raw)
+        await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում և ԴԴՍ-ում ({customer_name}):\n\n{response_text}")
         if GROUP_CHAT_ID:
             try:
                 chat_id_int = int(GROUP_CHAT_ID)
