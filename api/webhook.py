@@ -386,19 +386,11 @@ async def create_alfacrm_individual_lesson(date_str: str, time_str: str, subject
     else:
         return False, "Invalid time"
         
-    try:
-        dt_start = datetime.strptime(f"{date_iso} {time_prefix}", "%Y-%m-%d %H:%M")
-        dt_end = dt_start + timedelta(minutes=50)
-        time_to = dt_end.strftime("%H:%M")
-    except Exception as e:
-        return False, "Time parsing error"
-        
     payload = {
         "lesson_type_id": 3, # Individual Trial
-        "date_from": date_iso,
-        "date_to": date_iso,
+        "lesson_date": date_iso,
         "time_from": time_prefix,
-        "time_to": time_to,
+        "duration": 50,
         "subject_id": subject_id,
         "room_id": room_id,
         "customer_ids": [customer_id],
