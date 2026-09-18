@@ -7,22 +7,18 @@ from datetime import datetime
 def get_creds():
     creds_json_str = os.environ.get("GOOGLE_CREDENTIALS")
     if not creds_json_str:
-        return None
+        raise ValueError("GOOGLE_CREDENTIALS env var is missing or empty")
         
-    try:
-        # Some platforms escape newlines in JSON env vars
-        creds_json_str = creds_json_str.replace('\\n', '\n')
-        creds_dict = json.loads(creds_json_str)
-        creds = Credentials.from_service_account_info(creds_dict)
-        scoped = creds.with_scopes([
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive",
-        ])
-        return scoped
-    except Exception as e:
-        print(f"Error loading credentials: {e}")
-        return None
+    # Some platforms escape newlines in JSON env vars
+    creds_json_str = creds_json_str.replace('\\n', '\n')
+    creds_dict = json.loads(creds_json_str)
+    creds = Credentials.from_service_account_info(creds_dict)
+    scoped = creds.with_scopes([
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ])
+    return scoped
 
 agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds)
 
@@ -30,11 +26,13 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
     sheet_id = os.environ.get("GOOGLE_SHEET_ID")
     tab_name = os.environ.get("GOOGLE_SHEET_TAB_NAME", "Оплаты Манташяна")
     
-    if not sheet_id or not os.environ.get("GOOGLE_CREDENTIALS"):
-        print("Google Sheets credentials or sheet ID not configured.")
-        return False, "Not configured"
+    if not sheet_id:
+        return False, "GOOGLE_SHEET_ID is not configured"
         
     try:
+        # Pre-validate creds to catch parsing errors early
+        _ = get_creds()
+
         client = await agcm.authorize()
         spreadsheet = await client.open_by_key(sheet_id)
         worksheet = await spreadsheet.worksheet(tab_name)
