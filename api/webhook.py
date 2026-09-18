@@ -415,13 +415,18 @@ async def create_alfacrm_individual_lesson(date_str: str, time_str: str, subject
             json=payload,
             timeout=10.0
         )
-        if resp.status_code == 200:
+        try:
             data = resp.json()
+        except:
+            data = {}
+            
+        if resp.status_code == 200:
             if data.get("success"):
                 return True, "created"
             else:
                 return False, str(data.get("errors", data))
-        return False, f"HTTP {resp.status_code}"
+        else:
+            return False, f"HTTP {resp.status_code}: {str(data.get('errors', data))}"
     except Exception as e:
         return False, str(e)
 
