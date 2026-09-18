@@ -865,14 +865,14 @@ async def cmd_addprobk(message: types.Message):
     phone_raw = parts[1]
     lesson_type = parts[2].lower()
     date_raw = parts[3]
-    time_raw = parts[4]
+    time_raw = parts[4].replace("։", ":")
     
     if lesson_type not in ['mk', 'lg']:
         await message.answer("❌ Սխալ տեսակ: Օգտագործեք `mk` կամ `lg`:")
         return
         
     subject_id = 23 if lesson_type == 'mk' else 24
-    room_id = 34 if lesson_type == 'mk' else 33
+    room_id = 31 if lesson_type == 'mk' else 30
     lesson_name = "MakeBlock" if lesson_type == 'mk' else "LEGO Education"
     
     status_msg = await message.answer("🔄 Ստեղծում եմ (Կոմիտաս)...")
