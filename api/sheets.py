@@ -78,8 +78,28 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
             cashless_income   # I
         ]
         
-        await worksheet.append_row(row_data, value_input_option='USER_ENTERED')
-        return True, "Success"
+        # Fetch all values to find the real last row with data
+        records = await worksheet.get_all_values()
+        
+        last_row_with_data = 0
+        for i, row in enumerate(records):
+            # Check if there's any text in Date (C), Type (D), or Name (E)
+            has_data = False
+            for col_idx in [2, 3, 4]:
+                if col_idx < len(row) and str(row[col_idx]).strip():
+                    has_data = True
+                    break
+            if has_data:
+                last_row_with_data = i + 1
+                
+        next_row = last_row_with_data + 1
+        
+        await worksheet.update(
+            values=[row_data],
+            range_name=f"A{next_row}:I{next_row}",
+            value_input_option='USER_ENTERED'
+        )
+        return True, f"Success (row {next_row})"
     except Exception as e:
         print(f"Error appending to Google Sheets: {e}")
         return False, str(e)
