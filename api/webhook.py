@@ -280,6 +280,125 @@ async def get_alfacrm_customer_by_id(customer_id: int):
             
     return None
 
+async def get_alfacrm_customer_by_phone(phone_raw: str):
+    token = await get_alfacrm_token()
+    if not token: return None
+    
+    # Extract only digits and get the core 8 digits for Armenian numbers
+    digits = re.sub(r'\D', '', phone_raw)
+    if len(digits) >= 8:
+        base_phone = digits[-8:]
+    else:
+        base_phone = digits
+
+    client = get_http_client()
+    headers = {"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"}
+    
+    try:
+        response = await client.post(
+            "https://robixlab.s20.online/v2api/1/customer/index",
+            headers=headers,
+            json={"phone": base_phone, "is_study": [0, 1]},
+            timeout=5.0
+        )
+        if response.status_code == 200:
+            items = response.json().get("items", [])
+            if items:
+                return items[0]
+    except Exception as e:
+        print(f"Error fetching customer by phone: {e}")
+        
+    return None
+
+async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
+    token = await get_alfacrm_token()
+    if not token: return None
+    
+    headers = {"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"}
+    
+    parts = date_str.split('.')
+    if len(parts) == 2:
+        year = datetime.now().year
+        day, month = parts[0], parts[1]
+    elif len(parts) == 3:
+        day, month, year = parts[0], parts[1], parts[2]
+    else:
+        return None
+        
+    date_formatted = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+    
+    if len(time_str) == 2:
+        time_formatted = f"{time_str}:00:00"
+        time_prefix = f"{time_str}:00"
+    elif len(time_str) == 5:
+        time_formatted = f"{time_str}:00"
+        time_prefix = time_str
+    else:
+        return None
+        
+    datetime_formatted = f"{date_formatted} {time_formatted}"
+
+    client = get_http_client()
+    payload = {
+        "lesson_type_id": 9,
+        "group_id": group_id,
+        "location_id": 5,
+        "date_from": date_formatted,
+        "date_to": date_formatted
+    }
+    
+    try:
+        resp = await client.post(
+            "https://robixlab.s20.online/v2api/1/lesson/index",
+            headers=headers,
+            json=payload,
+            timeout=5.0
+        )
+        if resp.status_code == 200:
+            items = resp.json().get("items", [])
+            for lesson in items:
+                l_time = lesson.get("time_from", "")
+                if l_time.startswith(f"{date_formatted} {time_prefix}") or l_time == datetime_formatted:
+                    return lesson
+    except Exception as e:
+        print(f"Error fetching lesson: {e}")
+        
+    return None
+
+async def add_customer_to_lesson(lesson_id: int, current_details: list, customer_id: int):
+    token = await get_alfacrm_token()
+    if not token: return False, "Token error"
+    
+    for det in current_details:
+        if det.get("customer_id") == customer_id:
+            return True, "already_added"
+            
+    new_details = list(current_details)
+    new_details.append({
+        "customer_id": customer_id,
+        "is_attend": 0,
+        "reason_id": None
+    })
+    
+    headers = {"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"}
+    client = get_http_client()
+    
+    try:
+        resp = await client.post(
+            f"https://robixlab.s20.online/v2api/1/lesson/update?id={lesson_id}",
+            headers=headers,
+            json={"details": new_details},
+            timeout=10.0
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("success"):
+                return True, "added"
+            else:
+                return False, str(data.get("errors", data))
+        return False, f"HTTP {resp.status_code}"
+    except Exception as e:
+        return False, str(e)
 async def check_customer_rooms(customer_id: int) -> bool:
     token = await get_alfacrm_token()
     if not token: return False
@@ -575,6 +694,78 @@ def transliterate_name(text: str) -> str:
         return translit(text, 'ru')
     except Exception:
         return text
+
+@dp.message(Command("addprob"))
+async def cmd_addprob(message: types.Message):
+    if message.from_user.id not in KNOWN_USERS and message.from_user.id != ADMIN_ID:
+        return
+        
+    parts = message.text.split()
+    if len(parts) != 5:
+        await message.answer(
+            "❌ **Սխալ ձևաչափ**\n\n"
+            "Օգտագործեք՝ `/addprob <հեռախոս> <տեսակ> <ամսաթիվ> <ժամ>`\n"
+            "Օրինակ՝ `/addprob 077000700 mk 21.09 15`\n\n"
+            "Տեսակներ՝ `mk` (MakeBlock) կամ `lg` (LEGO Education)",
+            parse_mode="Markdown"
+        )
+        return
+        
+    phone_raw = parts[1]
+    lesson_type = parts[2].lower()
+    date_raw = parts[3]
+    time_raw = parts[4]
+    
+    if lesson_type not in ['mk', 'lg']:
+        await message.answer("❌ Սխալ տեսակ: Օգտագործեք `mk` կամ `lg`:")
+        return
+        
+    group_id = 23 if lesson_type == 'mk' else 24
+    lesson_name = "MakeBlock" if lesson_type == 'mk' else "LEGO Education"
+    
+    status_msg = await message.answer("🔄 Փնտրում եմ...")
+    
+    # 1. Search customer
+    customer = await get_alfacrm_customer_by_phone(phone_raw)
+    if not customer:
+        await status_msg.edit_text(f"❌ Լիդ կամ հաճախորդ {phone_raw} համարով չգտնվեց:")
+        return
+        
+    customer_id = customer.get("id")
+    customer_name_full = customer.get("name", "Անհայտ")
+    
+    # 2. Find specific lesson
+    lesson = await get_alfacrm_lesson(date_raw, time_raw, group_id)
+    if not lesson:
+        y = datetime.now().year
+        d_formatted = f"{date_raw}.{y}" if len(date_raw.split('.')) == 2 else date_raw
+        t_formatted = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
+        await status_msg.edit_text(f"❌ Փորձնական խմբային դաս «{lesson_name}» նշված ժամին ({d_formatted} {t_formatted}) չգտնվեց:")
+        return
+        
+    lesson_id = lesson.get("id")
+    current_details = lesson.get("details", [])
+    
+    # 3. Add to lesson
+    success, result_msg = await add_customer_to_lesson(lesson_id, current_details, customer_id)
+    
+    if success:
+        if result_msg == "already_added":
+            await status_msg.edit_text(f"⚠️ Աշակերտը ({customer_name_full}) արդեն գրանցված է այս դասին:")
+        else:
+            y = datetime.now().year
+            d_formatted = f"{date_raw}.{y}" if len(date_raw.split('.')) == 2 else date_raw
+            t_formatted = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
+            await status_msg.edit_text(
+                f"✅ **Հաջողությամբ ավելացվեց!**\n\n"
+                f"👤 **Աշակերտ:** {customer_name_full}\n"
+                f"📚 **Դաս:** Փորձնական {lesson_name}\n"
+                f"📅 **Ժամանակ:** {d_formatted} {t_formatted}\n"
+                f"📍 **Լոկացիա:** Գարեգին Նժդեհ (Կոմիտաս)",
+                parse_mode="Markdown"
+            )
+    else:
+        await status_msg.edit_text(f"❌ Սխալ դասին ավելացնելիս: {result_msg}")
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
