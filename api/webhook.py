@@ -791,34 +791,8 @@ async def cmd_addprob(message: types.Message):
     # 2. Find specific lesson
     lesson = await get_alfacrm_lesson(date_raw, time_raw, subject_id)
     if not lesson:
-        # Debug: fetch all lessons for that date to see why it failed
-        client = get_http_client()
-        token = await get_alfacrm_token()
         y = datetime.now().year
         parts = date_raw.split('.')
-        d_api = f"{parts[0].zfill(2)}.{parts[1].zfill(2)}.{y}"
-        
-        debug_info = []
-        try:
-            resp = await client.post(
-                "https://robixlab.s20.online/v2api/1/lesson/index",
-                headers={"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"},
-                json={"status": 1, "lesson_type_id": 9, "page": 0, "per-page": 200},
-                timeout=5.0
-            )
-            items = resp.json().get("items", [])
-            for item in items:
-                # filter to lesson_type_id 9 or just show all
-                l_type = item.get("lesson_type_id")
-                g_id = item.get("group_id")
-                g_ids = item.get("group_ids")
-                t_from = item.get("time_from")
-                if l_type in [3, 9]:
-                    debug_info.append(f"ID: {item.get('id')}, Time: {t_from}, Group: {g_id}, Groups: {g_ids}")
-        except Exception as e:
-            debug_info.append(f"Error fetching debug: {e}")
-            
-        debug_str = "\n".join(debug_info)
         d_f = f"{date_raw}.{y}" if len(parts) == 2 else date_raw
         t_f = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
         await status_msg.edit_text(f"❌ Փորձնական խմբային դաս «{lesson_name}» նշված ժամին ({d_f} {t_f}) չգտնվեց:\n\n**Առկա դասեր այս օրը (Տիպ 3/9):**\n`{debug_str}`")
@@ -902,7 +876,12 @@ async def cmd_addprobk(message: types.Message):
             parse_mode="Markdown"
         )
     else:
-        await status_msg.edit_text(f"❌ Սխալ դասը ստեղծելիս: {result_msg}")
+        err_msg = result_msg
+        if "Аудитория занята" in result_msg:
+            err_msg = "Լսարանը զբաղված է այդ ժամին"
+        elif "Неверный формат" in result_msg or "Необходимо заполнить" in result_msg:
+            err_msg = "Սխալ ձևաչափ կամ բացակայող տվյալներ"
+        await status_msg.edit_text(f"❌ Սխալ դասը ստեղծելիս: {err_msg}")
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
@@ -965,7 +944,8 @@ async def cmd_about(message: types.Message):
         "📞 **Վաճառքի բաժին (Sales / Alfa CRM)**\n"
         "• Փորձնական դասերի գրանցումների դիտում ըստ օրերի:\n"
         "• Alfa CRM-ից աշակերտների քարտերի և հեռախոսահամարների ստացում:\n"
-        "• Աշակերտների ավելացում խմբերում Alfa CRM-ում (/add):\n\n"
+        "• Աշակերտների ավելացում խմբերում Alfa CRM-ում (/add):\n"
+        "• Նոր փորձնական դասերի պլանավորում և աշակերտի գրանցում (/addprob, /addprobk):\n\n"
         "🎓 **Ուսուցիչների բաժին**\n"
         "• Lego խմբերի համար բաց թեմաների որոնում և ընտրություն:\n"        "• Անձնական դասացուցակի դիտում այսօր և վաղը (/myschedule):\n\n"
         "Ամբողջական հրամանների համար գրեք /help:\n\n" 
@@ -987,6 +967,8 @@ async def cmd_help(message: types.Message):
         "/unban [ID] - Ապաբլոկավորել\n\n"
         "📞 **Վաճառքի բաժին (Sales / Alfa CRM)**\n"
         "/add [Աշակերտ] [Խումբ] - Ավելացնել աշակերտին խմբում\n"
+        "/addprob [հեռախոս] [mk/lg] [օր] [ժամ] - Գրանցել խմբային փորձնականին (Գ.Նժդեհ)\n"
+        "/addprobk [հեռախոս] [mk/lg] [օր] [ժամ] - Ստեղծել անհատական փորձնական (Կոմիտաս)\n"
         "/prob - Այսօրվա փորձնական դասերը (ըստ աղյուսակի)\n"
         "/proball - Շաբաթվա փորձնական դասերը (ըստ աղյուսակի)\n"
         "/getprob - Այս շաբաթվա գրանցվածները (Անուն, Հեռախոս, Անկետա)\n"
@@ -1821,17 +1803,16 @@ async def cmd_sendupdate(message: types.Message):
     await ensure_db()
     
     text = (
-        "🚀 **Նոր թարմացում բոտում!**\n\n"
+        "🚀 **Նոր թարմացում բոտում! (V2.5)**\n\n"
         "Բարև բոլորին: Բոտում ավելացել են նոր հնարավորություններ և կատարվել են կարևոր օպտիմիզացիաներ.\n\n"
-        "✅ **Նոր հրաման՝ /add**\n"
-        "Այժմ կարող եք անմիջապես բոտից աշակերտներին ավելացնել Alfa CRM-ի խմբերում (Գարեգին Նժդեհ):\n"
-        "👉 Օգտագործման ձևաչափ՝ `/add [Անուն Ազգանուն] [Խումբ]`\n"
-        "*Օրինակ՝* `/add Saakyan Gexam Lego 1`\n\n"
-        "⚡ **Արագագործության բարելավում**\n"
-        "Բոտի աշխատանքը էապես արագացել է: Վճարումների գրանցումը և խմբերում ավելացումը այժմ կատարվում են վայրկենապես:\n\n"
+        "🆕 **Նոր հրամաններ՝ /addprob և /addprobk**\n"
+        "Այժմ կարող եք աշակերտներին միանգամից գրանցել փորձնական դասերի (խմբային կամ անհատական) անմիջապես բոտից:\n"
+        "👉 `/addprob <հեռախոս> <mk/lg> <օր.ամիս> <ժամ>` — Խմբային փորձնական (Գ. Նժդեհ)\n"
+        "👉 `/addprobk <հեռախոս> <mk/lg> <օր.ամիս> <ժամ>` — Անհատական փորձնական (Կոմիտաս)\n\n"
+        "⚡ **Օպտիմիզացիա և Արագագործության բարելավում**\n"
+        "Բոտի աշխատանքը էապես արագացել է և բարելավվել է սխալների մշակումը: Հարցումները կատարվում են շատ ավելի արագ ու հստակ, իսկ սխալների դեպքում բոտը հաղորդում է հստակ պատճառը:\n\n"
         "🛠 **Այլ փոփոխություններ**\n"
-        "Թարմացվել են հրահանգները և շտկվել են որոշ սխալներ:\n"
-        "Հրամանների ամբողջական ցանկին ծանոթանալու համար գրեք /help:"
+        "Թարմացվել են /about և /help հրահանգները՝ նոր ֆունկցիաներին ծանոթանալու համար:"
     )
     
     target_users = set(KNOWN_USERS).union(EXECUTORS.keys())
