@@ -1,16 +1,2 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/warmup",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/tasks",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/teachers",
-      "schedule": "0 16 * * *"
-    }
-  ]
 }
