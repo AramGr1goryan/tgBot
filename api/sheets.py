@@ -79,7 +79,7 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
         ]
         
         # Fetch all values to find the real last row with data
-        records = await worksheet.get_all_values()
+        records = await worksheet.get_values()
         
         last_row_with_data = 0
         for i, row in enumerate(records):
