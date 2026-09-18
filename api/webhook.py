@@ -340,10 +340,12 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
     datetime_formatted = f"{date_iso} {time_formatted}"
 
     client = get_http_client()
+    # Safest fallback: fetch all planned trial lessons and filter by date/time locally
     payload = {
-        "date_from": date_api,
-        "date_to": date_api,
-        "status": 1 # 1 = planned
+        "status": 1, # 1 = planned
+        "lesson_type_id": 9,
+        "page": 0,
+        "per-page": 200
     }
     
     try:
@@ -764,7 +766,7 @@ async def cmd_addprob(message: types.Message):
             resp = await client.post(
                 "https://robixlab.s20.online/v2api/1/lesson/index",
                 headers={"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"},
-                json={"date_from": d_api, "date_to": d_api, "status": 1},
+                json={"status": 1, "lesson_type_id": 9, "page": 0, "per-page": 200},
                 timeout=5.0
             )
             items = resp.json().get("items", [])
