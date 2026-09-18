@@ -1857,7 +1857,7 @@ async def webhook(request: Request):
                     try:
                         async with pool.acquire() as conn:
                             await conn.execute(
-                                "INSERT INTO all_users (user_id, username, full_name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+                                "INSERT INTO all_users(user_id, username, full_name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
                                 user_id, username, full_name
                             )
                     except Exception as e:
