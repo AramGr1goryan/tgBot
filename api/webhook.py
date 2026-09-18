@@ -366,56 +366,33 @@ async def add_customer_to_alfacrm_group(group_id: int, customer_id: int, group_o
         "Content-Type": "application/json"
     }
     
-    async with httpx.AsyncClient() as client:
-        if not group_obj:
-            try:
-                resp = await client.post(
-                    "https://robixlab.s20.online/v2api/1/group/index",
-                    headers=headers,
-                    json={"id": group_id},
-                    timeout=10.0
-                )
-                if resp.status_code == 200:
-                    items = resp.json().get("items", [])
-                    if items:
-                        group_obj = items[0]
-            except Exception as e:
-                print(f"Error fetching group {group_id}: {e}")
-                
-        existing_ids = []
-        if group_obj:
-            existing_ids = group_obj.get("customer_ids") or []
-            
-        if customer_id in existing_ids:
-            return True, "already_in_group"
-            
-        updated_ids = list(set(existing_ids + [customer_id]))
-        
-        payload = {
-            "id": group_id,
-            "customer_ids": updated_ids
-        }
-        if group_obj and group_obj.get("name"):
-            payload["name"] = group_obj.get("name")
-            
-        try:
-            update_resp = await client.post(
-                f"https://robixlab.s20.online/v2api/1/group/update?id={group_id}",
-                headers=headers,
-                json=payload,
-                timeout=10.0
-            )
-            if update_resp.status_code == 200:
-                res_data = update_resp.json()
-                if res_data.get("success") or res_data.get("model") or res_data.get("items") or res_data.get("id") or not res_data.get("errors"):
-                    return True, "added"
-                else:
-                    return False, str(res_data.get("errors") or res_data)
+    client = get_http_client()
+    payload = {
+        "customer_id": customer_id
+    }
+    
+    try:
+        update_resp = await client.post(
+            f"https://robixlab.s20.online/v2api/1/cgi/create?group_id={group_id}",
+            headers=headers,
+            json=payload,
+            timeout=10.0
+        )
+        if update_resp.status_code == 200:
+            res_data = update_resp.json()
+            if res_data.get("success"):
+                return True, "added"
             else:
-                return False, f"HTTP {update_resp.status_code}: {update_resp.text}"
-        except Exception as e:
-            return False, str(e)
-            
+                errors = res_data.get("errors", {})
+                group_errors = errors.get("group_id", [])
+                if group_errors and "уже состоит" in group_errors[0]:
+                    return True, "already_in_group"
+                return False, str(errors or res_data)
+        else:
+            return False, f"HTTP {update_resp.status_code}: {update_resp.text}"
+    except Exception as e:
+        return False, str(e)
+        
     return False, "Unknown error"
 
 async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str, payer_name: str):
