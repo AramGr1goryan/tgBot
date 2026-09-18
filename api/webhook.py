@@ -310,7 +310,7 @@ async def get_alfacrm_customer_by_phone(phone_raw: str):
         
     return None
 
-async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
+async def get_alfacrm_lesson(date_str: str, time_str: str, subject_id: int):
     token = await get_alfacrm_token()
     if not token: return None
     
@@ -326,26 +326,20 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
         return None
         
     date_iso = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
-    date_api = f"{day.zfill(2)}.{month.zfill(2)}.{year}"
     
     if len(time_str) == 2:
-        time_formatted = f"{time_str}:00:00"
         time_prefix = f"{time_str}:00"
     elif len(time_str) == 5:
-        time_formatted = f"{time_str}:00"
         time_prefix = time_str
     else:
         return None
-        
-    datetime_formatted = f"{date_iso} {time_formatted}"
 
     client = get_http_client()
-    # Safest fallback: fetch all planned trial lessons and filter by date/time locally
     payload = {
-        "status": 1, # 1 = planned
-        "lesson_type_id": 9,
-        "page": 0,
-        "per-page": 200
+        "date_from": date_iso,
+        "date_to": date_iso,
+        "status": 1,
+        "lesson_type_id": 9
     }
     
     try:
@@ -358,24 +352,12 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
         if resp.status_code == 200:
             items = resp.json().get("items", [])
             for lesson in items:
-                # Check group_id (it can be an int or a list of ints)
-                l_group_id = lesson.get("group_id")
-                l_group_ids = lesson.get("group_ids", [])
-                
-                is_group_match = False
-                if isinstance(l_group_id, list):
-                    is_group_match = group_id in l_group_id
-                elif l_group_id is not None:
-                    is_group_match = (l_group_id == group_id)
-                
-                if not is_group_match and isinstance(l_group_ids, list):
-                    is_group_match = group_id in l_group_ids
-                    
-                if not is_group_match:
+                # Check subject_id instead of group_id
+                if lesson.get("subject_id") != subject_id:
                     continue
                     
                 l_time = lesson.get("time_from", "")
-                if l_time.startswith(f"{date_iso} {time_prefix}") or l_time == datetime_formatted:
+                if l_time.startswith(f"{date_iso} {time_prefix}"):
                     return lesson
     except Exception as e:
         print(f"Error fetching lesson: {e}")
@@ -737,7 +719,7 @@ async def cmd_addprob(message: types.Message):
         await message.answer("❌ Սխալ տեսակ: Օգտագործեք `mk` կամ `lg`:")
         return
         
-    group_id = 23 if lesson_type == 'mk' else 24
+    subject_id = 23 if lesson_type == 'mk' else 24
     lesson_name = "MakeBlock" if lesson_type == 'mk' else "LEGO Education"
     
     status_msg = await message.answer("🔄 Փնտրում եմ...")
@@ -752,7 +734,7 @@ async def cmd_addprob(message: types.Message):
     customer_name_full = customer.get("name", "Անհայտ")
     
     # 2. Find specific lesson
-    lesson = await get_alfacrm_lesson(date_raw, time_raw, group_id)
+    lesson = await get_alfacrm_lesson(date_raw, time_raw, subject_id)
     if not lesson:
         # Debug: fetch all lessons for that date to see why it failed
         client = get_http_client()
