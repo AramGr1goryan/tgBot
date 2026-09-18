@@ -310,7 +310,7 @@ async def get_alfacrm_customer_by_phone(phone_raw: str):
         
     return None
 
-async def get_alfacrm_lesson(date_str: str, time_str: str, subject_id: int):
+async def get_alfacrm_lesson(date_str: str, time_str: str, subject_id: int, lesson_type_id: int = 9):
     token = await get_alfacrm_token()
     if not token: return None
     
@@ -339,7 +339,7 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, subject_id: int):
         "date_from": date_iso,
         "date_to": date_iso,
         "status": 1,
-        "lesson_type_id": 9
+        "lesson_type_id": lesson_type_id
     }
     
     try:
@@ -782,6 +782,101 @@ async def cmd_addprob(message: types.Message):
                 f"📚 **Դաս:** Փորձնական {lesson_name}\n"
                 f"📅 **Ժամանակ:** {d_formatted} {t_formatted}\n"
                 f"📍 **Լոկացիա:** Գարեգին Նժդեհ",
+                parse_mode="Markdown"
+            )
+    else:
+        await status_msg.edit_text(f"❌ Սխալ դասին ավելացնելիս: {result_msg}")
+
+@dp.message(Command("addprobk"))
+async def cmd_addprobk(message: types.Message):
+    if message.from_user.id not in KNOWN_USERS and message.from_user.id != ADMIN_ID:
+        return
+        
+    parts = message.text.split()
+    if len(parts) != 5:
+        await message.answer(
+            "❌ **Սխալ ձևաչափ**\n\n"
+            "Օգտագործեք՝ `/addprobk <հեռախոս> <տեսակ> <ամսաթիվ> <ժամ>`\n"
+            "Օրինակ՝ `/addprobk 077000700 mk 21.09 15`\n\n"
+            "Տեսակներ՝ `mk` (MakeBlock) կամ `lg` (LEGO Education)",
+            parse_mode="Markdown"
+        )
+        return
+        
+    phone_raw = parts[1]
+    lesson_type = parts[2].lower()
+    date_raw = parts[3]
+    time_raw = parts[4]
+    
+    if lesson_type not in ['mk', 'lg']:
+        await message.answer("❌ Սխալ տեսակ: Օգտագործեք `mk` կամ `lg`:")
+        return
+        
+    subject_id = 23 if lesson_type == 'mk' else 24
+    lesson_name = "MakeBlock" if lesson_type == 'mk' else "LEGO Education"
+    
+    status_msg = await message.answer("🔄 Փնտրում եմ (Կոմիտաս)...")
+    
+    # 1. Search customer
+    customer = await get_alfacrm_customer_by_phone(phone_raw)
+    if not customer:
+        await status_msg.edit_text(f"❌ Լիդ կամ հաճախորդ {phone_raw} համարով չգտնվեց:")
+        return
+        
+    customer_id = customer.get("id")
+    customer_name_full = customer.get("name", "Անհայտ")
+    
+    # 2. Find specific lesson (lesson_type_id = 3 for Individual Trial)
+    lesson = await get_alfacrm_lesson(date_raw, time_raw, subject_id, lesson_type_id=3)
+    if not lesson:
+        # Debug: fetch all lessons for that date to see why it failed
+        client = get_http_client()
+        token = await get_alfacrm_token()
+        y = datetime.now().year
+        parts_date = date_raw.split('.')
+        d_api = f"{parts_date[0].zfill(2)}.{parts_date[1].zfill(2)}.{y}"
+        
+        debug_info = []
+        try:
+            resp = await client.post(
+                "https://robixlab.s20.online/v2api/1/lesson/index",
+                headers={"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"},
+                json={"date_from": d_api, "date_to": d_api, "status": 1, "lesson_type_id": 3},
+                timeout=5.0
+            )
+            items = resp.json().get("items", [])
+            for item in items:
+                l_type = item.get("lesson_type_id")
+                s_id = item.get("subject_id")
+                t_from = item.get("time_from")
+                if l_type == 3:
+                    debug_info.append(f"ID: {item.get('id')}, Time: {t_from}, Subject: {s_id}")
+        except Exception as e:
+            debug_info.append(f"Error fetching debug: {e}")
+            
+        debug_str = "\n".join(debug_info)
+        d_f = f"{date_raw}.{y}" if len(parts_date) == 2 else date_raw
+        t_f = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
+        await status_msg.edit_text(f"❌ Անհատական փորձնական դաս «{lesson_name}» նշված ժամին ({d_f} {t_f}) չգտնվեց:\n\n**Առկա դասեր այս օրը (Տիպ 3):**\n`{debug_str}`")
+        return
+        
+    lesson_id = lesson.get("id")
+    # 3. Add to lesson
+    success, result_msg = await add_customer_to_lesson(lesson_id, lesson, customer_id)
+    
+    if success:
+        if result_msg == "already_added":
+            await status_msg.edit_text(f"⚠️ Աշակերտը ({customer_name_full}) արդեն գրանցված է այս դասին:")
+        else:
+            y = datetime.now().year
+            d_formatted = f"{date_raw}.{y}" if len(date_raw.split('.')) == 2 else date_raw
+            t_formatted = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
+            await status_msg.edit_text(
+                f"✅ **Հաջողությամբ ավելացվեց!**\n\n"
+                f"👤 **Աշակերտ:** {customer_name_full}\n"
+                f"📚 **Դաս:** Անհատական փորձնական {lesson_name}\n"
+                f"📅 **Ժամանակ:** {d_formatted} {t_formatted}\n"
+                f"📍 **Լոկացիա:** Կոմիտաս",
                 parse_mode="Markdown"
             )
     else:
