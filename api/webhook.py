@@ -1467,6 +1467,48 @@ async def cmd_unban(message: types.Message):
         BANNED_USERS.remove(target_id)
     await message.answer(f"✅ Օգտատեր {target_id}-ի բլոկավորումը հանված է:")
 
+@dp.message(Command("sendupdate"))
+async def cmd_sendupdate(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    await ensure_db()
+    
+    text = (
+        "🚀 **Նոր թարմացում բոտում!**\n\n"
+        "Բարև բոլորին: Բոտում ավելացել են նոր հնարավորություններ և կատարվել են կարևոր օպտիմիզացիաներ.\n\n"
+        "✅ **Նոր հրաման՝ /add**\n"
+        "Այժմ կարող եք անմիջապես բոտից աշակերտներին ավելացնել Alfa CRM-ի խմբերում (Գարեգին Նժդեհ):\n"
+        "👉 Օգտագործման ձևաչափ՝ `/add [Անուն Ազգանուն] [Խումբ]`\n"
+        "*Օրինակ՝* `/add Saakyan Gexam Lego 1`\n\n"
+        "⚡ **Արագագործության բարելավում**\n"
+        "Բոտի աշխատանքը էապես արագացել է: Վճարումների գրանցումը և խմբերում ավելացումը այժմ կատարվում են վայրկենապես:\n\n"
+        "🛠 **Այլ փոփոխություններ**\n"
+        "Թարմացվել են հրահանգները և շտկվել են որոշ սխալներ:\n"
+        "Հրամանների ամբողջական ցանկին ծանոթանալու համար գրեք /help:"
+    )
+    
+    target_users = set(KNOWN_USERS).union(EXECUTORS.keys())
+    if POSTGRES_URL:
+        try:
+            conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+            rows = await conn.fetch("SELECT user_id FROM all_users UNION SELECT user_id FROM executors")
+            await conn.close()
+            for r in rows:
+                target_users.add(r['user_id'])
+        except Exception as e:
+            print(f"Failed to fetch users: {e}")
+            
+    success_count = 0
+    for u_id in target_users:
+        try:
+            await bot.send_message(u_id, text, parse_mode="Markdown")
+            success_count += 1
+        except Exception:
+            pass
+            
+    await message.answer(f"✅ Հաղորդագրությունը հաջողությամբ ուղարկվել է {success_count} օգտատերերի:")
+
 @dp.message(Command("getusers"))
 async def cmd_getusers(message: types.Message):
     if message.from_user.id != ADMIN_ID:
