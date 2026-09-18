@@ -340,9 +340,6 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
 
     client = get_http_client()
     payload = {
-        "lesson_type_id": 9,
-        "group_id": group_id,
-        "location_id": 5,
         "date_from": date_formatted,
         "date_to": date_formatted
     }
@@ -357,6 +354,23 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, group_id: int):
         if resp.status_code == 200:
             items = resp.json().get("items", [])
             for lesson in items:
+                # Check group_id (it can be an int or a list of ints)
+                l_group_id = lesson.get("group_id")
+                l_group_ids = lesson.get("group_ids", [])
+                
+                # In some cases AlfaCRM returns group_ids as a list or a single int
+                is_group_match = False
+                if isinstance(l_group_id, list):
+                    is_group_match = group_id in l_group_id
+                elif l_group_id is not None:
+                    is_group_match = (l_group_id == group_id)
+                
+                if not is_group_match and isinstance(l_group_ids, list):
+                    is_group_match = group_id in l_group_ids
+                    
+                if not is_group_match:
+                    continue
+                    
                 l_time = lesson.get("time_from", "")
                 if l_time.startswith(f"{date_formatted} {time_prefix}") or l_time == datetime_formatted:
                     return lesson
