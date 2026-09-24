@@ -665,7 +665,11 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
                 json=payload,
                 timeout=10.0
             )
-            return response.status_code == 200
+            if response.status_code == 200:
+                return True
+            else:
+                print(f"Alfa CRM Pay Error: {response.status_code} - {response.text}")
+                return False
         except Exception as e:
             print(f"Error creating payment: {e}")
     return False
