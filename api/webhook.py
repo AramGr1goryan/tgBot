@@ -14,6 +14,8 @@ import asyncio
 import zoneinfo
 import httpx
 from api.sheets import append_payment_to_sheet
+from api.locations import LOCATIONS, get_location, resolve_alias, DEFAULT_LOCATION
+from api.i18n import t
 
 
 API_TOKEN = os.getenv("BOT_TOKEN")
@@ -41,6 +43,7 @@ BANNED_USERS = set()
 EXECUTORS = {}
 KNOWN_USERS = set()
 PENDING_PAYMENTS = {}
+USER_SETTINGS: dict = {}  # user_id → {"location": "GN", "language": "hy"}
 
 PROB_SCHEDULE = {
     0: ("Երկուշաբթի", "• 15:00 — Lego (6 աշակերտ) կամ Makeblock (3 աշակերտ)\n• 17:00 — Lego (2 աշակերտ)\n• 18:30 — Lego (3 աշակերտ)"),
@@ -50,6 +53,13 @@ PROB_SCHEDULE = {
     4: ("Ուրբաթ", "• 13:00 - 16:00 — Lego (6 աշակերտ) և Makeblock (3 աշակերտ)\n• 18:30 — Lego (6 աշակերտ) և Makeblock (3 աշակերտ)"),
     5: ("Շաբաթ", "• 17:30— Lego (6 աշակերտ)\n• 17:30 — Makeblock (3 աշակերտ)"),
     6: ("Կիրակի", "Այսօր փորձնական դասեր չկան։")
+}
+
+# Маппинг расписания пробных уроков по локации
+PROB_SCHEDULES = {
+    "GN": PROB_SCHEDULE,
+    "K":  None,  # Расписание Комитас: добавить данные
+    "S":  None,  # Расписание Саят-Нова: добавить данные
 }
 
 STRUCTURED_SCHEDULE = {
@@ -188,7 +198,8 @@ def _parse_lessons(items, tz):
         })
     return booked_slots
 
-async def get_alfacrm_customer_by_name(name: str):
+async def get_alfacrm_customer_by_name(name: str, crm_prefix: str = None):
+    """Search CRM customer by name. If crm_prefix given, filters to that location only."""
     token = await get_alfacrm_token()
     if not token: return None
     
@@ -217,7 +228,14 @@ async def get_alfacrm_customer_by_name(name: str):
             if response.status_code == 200:
                 items = response.json().get("items", [])
                 if items:
-                    return items[0]
+                    if crm_prefix:
+                        filtered = [i for i in items
+                                    if i.get("name", "").startswith(f"{crm_prefix} |")
+                                    or i.get("name", "").startswith(f"{crm_prefix}|")]
+                        if filtered:
+                            return filtered[0]
+                    else:
+                        return items[0]
         except Exception as e:
             print(f"Error searching customer '{search_n}': {e}")
             
@@ -239,8 +257,14 @@ async def get_alfacrm_customer_by_name(name: str):
                     other_words = [w.lower() for w in all_words if w.lower() != word.lower()]
                     for item in items:
                         item_name = item.get("name", "").lower()
-                        if any(ow in item_name for ow in other_words) or len(items) == 1:
-                            return item
+                        match = any(ow in item_name for ow in other_words) or len(items) == 1
+                        if match:
+                            if crm_prefix:
+                                if (item.get("name", "").startswith(f"{crm_prefix} |")
+                                        or item.get("name", "").startswith(f"{crm_prefix}|")):
+                                    return item
+                            else:
+                                return item
             except Exception as e:
                 print(f"Error searching candidate word '{word}': {e}")
             
@@ -280,7 +304,8 @@ async def get_alfacrm_customer_by_id(customer_id: int):
             
     return None
 
-async def get_alfacrm_customer_by_phone(phone_raw: str):
+async def get_alfacrm_customer_by_phone(phone_raw: str, crm_prefix: str = None):
+    """Search CRM customer by phone. If crm_prefix given, filters to that location only."""
     token = await get_alfacrm_token()
     if not token: return None
     
@@ -304,24 +329,31 @@ async def get_alfacrm_customer_by_phone(phone_raw: str):
         if response.status_code == 200:
             items = response.json().get("items", [])
             if items:
+                if crm_prefix:
+                    filtered = [i for i in items
+                                if i.get("name", "").startswith(f"{crm_prefix} |")
+                                or i.get("name", "").startswith(f"{crm_prefix}|")]
+                    return filtered[0] if filtered else None
                 return items[0]
     except Exception as e:
         print(f"Error fetching customer by phone: {e}")
         
     return None
 
-async def get_alfacrm_lesson(date_str: str, time_str: str, subject_id: int, lesson_type_id: int = 9):
+async def get_alfacrm_lesson(date_str: str, time_str: str, subject_id: int,
+                              lesson_type_id: int = 9, room_ids: list = None):
+    """Search CRM lesson by date/time/subject. If room_ids given, filters to those rooms (location-specific)."""
     token = await get_alfacrm_token()
     if not token: return None
     
     headers = {"X-ALFACRM-TOKEN": token, "Accept": "application/json", "Content-Type": "application/json"}
     
-    parts = date_str.split('.')
-    if len(parts) == 2:
+    d_parts = date_str.split('.')
+    if len(d_parts) == 2:
         year = datetime.now().year
-        day, month = parts[0], parts[1]
-    elif len(parts) == 3:
-        day, month, year = parts[0], parts[1], parts[2]
+        day, month = d_parts[0], d_parts[1]
+    elif len(d_parts) == 3:
+        day, month, year = d_parts[0], d_parts[1], d_parts[2]
     else:
         return None
         
@@ -351,11 +383,12 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, subject_id: int, less
         )
         if resp.status_code == 200:
             items = resp.json().get("items", [])
+            valid_rooms = [rid for rid in (room_ids or []) if rid is not None]
             for lesson in items:
-                # Check subject_id instead of group_id
                 if lesson.get("subject_id") != subject_id:
                     continue
-                    
+                if valid_rooms and lesson.get("room_id") not in valid_rooms:
+                    continue  # Фильтр по локации
                 l_time = lesson.get("time_from", "")
                 if l_time.startswith(f"{date_iso} {time_prefix}"):
                     return lesson
@@ -363,6 +396,7 @@ async def get_alfacrm_lesson(date_str: str, time_str: str, subject_id: int, less
         print(f"Error fetching lesson: {e}")
         
     return None
+
 
 async def create_alfacrm_individual_lesson(date_str: str, time_str: str, subject_id: int, room_id: int, customer_id: int):
     token = await get_alfacrm_token()
@@ -453,7 +487,7 @@ async def add_customer_to_lesson(lesson_id: int, lesson_obj: dict, customer_id: 
         return False, f"HTTP {resp.status_code}"
     except Exception as e:
         return False, str(e)
-async def check_customer_rooms(customer_id: int) -> bool:
+async def check_customer_rooms(customer_id: int, valid_rooms: list = None) -> bool:
     token = await get_alfacrm_token()
     if not token: return False
     
@@ -474,8 +508,9 @@ async def check_customer_rooms(customer_id: int) -> bool:
         )
         if response.status_code == 200:
             items = response.json().get("items", [])
+            valid_r = valid_rooms if valid_rooms is not None else [33, 34]
             for lesson in items:
-                if lesson.get("room_id") in [33, 34]:
+                if lesson.get("room_id") in valid_r:
                     return True
     except Exception as e:
         print(f"Error checking rooms: {e}")
@@ -570,7 +605,9 @@ async def add_customer_to_alfacrm_group(group_id: int, customer_id: int, group_o
         
     return False, "Unknown error"
 
-async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str, payer_name: str):
+async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
+                                  payer_name: str, location_config: dict = None):
+    """Create payment in CRM. Uses location_config for account IDs and location_id."""
     token = await get_alfacrm_token()
     if not token: return False
     
@@ -580,16 +617,20 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
         "Content-Type": "application/json"
     }
     
-    # Account Mapping
+    # Resolve location config (fall back to GN defaults if not provided)
+    loc = location_config or get_location(DEFAULT_LOCATION)
+    accounts = loc["accounts"]
+    
+    # Account Mapping by method
     method = method_raw.lower()
     if method == 'n':
-        pay_account_id = 5 # Касса Шенгавит
+        pay_account_id = accounts["cash"]
     elif method == 'b.n':
-        pay_account_id = 6 # Терминал Шенгавит
+        pay_account_id = accounts["terminal"]
     elif method in ['c', 'с']:
-        pay_account_id = 2 # На карту
+        pay_account_id = accounts["card"]
     else:
-        pay_account_id = 5
+        pay_account_id = accounts["cash"]
         
     # Item Mapping
     if amount == 2000:
@@ -605,8 +646,8 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
         "pay_account_id": pay_account_id,
         "pay_item_id": income_item_id,
         "pay_type_id": 1,
-        "branch_id": 1,
-        "location_id": 5,
+        "branch_id": loc["branch_id"],       # Всегда 1 (один CRM-филиал)
+        "location_id": loc["location_id"],   # Различается по локации
         "payer_name": payer_name,
         "income": amount
     }
@@ -677,7 +718,12 @@ async def ensure_db():
     try:
         async with pool.acquire() as conn:
             await conn.execute('''CREATE TABLE IF NOT EXISTS tasks
-                         (id SERIAL PRIMARY KEY, description TEXT)''')
+                         (id SERIAL PRIMARY KEY, description TEXT, location TEXT NOT NULL DEFAULT 'GN')''')
+            # Безопасная миграция: добавляем поле location в уже существующую таблицу
+            try:
+                await conn.execute("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS location TEXT NOT NULL DEFAULT 'GN'")
+            except Exception:
+                pass
             await conn.execute('''CREATE TABLE IF NOT EXISTS lego_groups
                          (id SERIAL PRIMARY KEY, name TEXT UNIQUE)''')
             await conn.execute('''CREATE TABLE IF NOT EXISTS lego_themes
@@ -688,6 +734,10 @@ async def ensure_db():
                          (user_id BIGINT PRIMARY KEY, name TEXT)''')
             await conn.execute('''CREATE TABLE IF NOT EXISTS all_users
                          (user_id BIGINT PRIMARY KEY, username TEXT, full_name TEXT)''')
+            await conn.execute('''CREATE TABLE IF NOT EXISTS user_settings (
+                         user_id         BIGINT PRIMARY KEY,
+                         active_location TEXT   NOT NULL DEFAULT 'GN',
+                         language        TEXT   NOT NULL DEFAULT 'hy')''')
                          
             rows = await conn.fetch("SELECT user_id FROM banned_users")
             BANNED_USERS = {row['user_id'] for row in rows}
@@ -703,18 +753,20 @@ async def ensure_db():
             db_initialized = True
     except Exception as e:
         print(f"ensure_db error: {e}")
+    # Загружаем настройки пользователей в кэш (разрешено после ensure_db, так как функция определяется ниже)
+    await load_user_settings()
 
-async def add_task(description: str):
+async def add_task(description: str, location: str = 'GN'):
     pool = await get_db_pool()
     if pool:
         async with pool.acquire() as conn:
-            await conn.execute("INSERT INTO tasks (description) VALUES ($1)", description)
+            await conn.execute("INSERT INTO tasks (description, location) VALUES ($1, $2)", description, location)
 
-async def get_tasks():
+async def get_tasks(location: str = 'GN'):
     pool = await get_db_pool()
     if not pool: return []
     async with pool.acquire() as conn:
-        return await conn.fetch("SELECT id, description FROM tasks ORDER BY id")
+        return await conn.fetch("SELECT id, description FROM tasks WHERE location = $1 ORDER BY id", location)
 
 async def delete_task(task_id: int):
     pool = await get_db_pool()
@@ -725,6 +777,68 @@ async def delete_task(task_id: int):
             await conn.execute("DELETE FROM tasks WHERE id = $1", task_id)
             return row['description']
     return None
+
+# ─────────────────────── User Settings ───────────────────────
+
+async def load_user_settings() -> None:
+    """Load all user settings (location + language) from DB into USER_SETTINGS cache."""
+    pool = await get_db_pool()
+    if not pool:
+        return
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT user_id, active_location, language FROM user_settings")
+            for row in rows:
+                USER_SETTINGS[row['user_id']] = {
+                    "location": row['active_location'],
+                    "language": row['language'],
+                }
+    except Exception as e:
+        print(f"load_user_settings error: {e}")
+
+async def get_user_location(user_id: int) -> dict:
+    """Returns the active location config dict for a user. Defaults to GN."""
+    code = USER_SETTINGS.get(user_id, {}).get("location", DEFAULT_LOCATION)
+    return get_location(code) or get_location(DEFAULT_LOCATION)
+
+async def set_user_location(user_id: int, code: str) -> None:
+    """Persist active location for user in DB and cache."""
+    current = USER_SETTINGS.get(user_id, {})
+    USER_SETTINGS[user_id] = {"location": code, "language": current.get("language", "hy")}
+    pool = await get_db_pool()
+    if pool:
+        try:
+            async with pool.acquire() as conn:
+                await conn.execute(
+                    """INSERT INTO user_settings (user_id, active_location, language)
+                       VALUES ($1, $2, 'hy')
+                       ON CONFLICT (user_id) DO UPDATE SET active_location = $2""",
+                    user_id, code
+                )
+        except Exception as e:
+            print(f"set_user_location error: {e}")
+
+async def get_user_language(user_id: int) -> str:
+    """Returns the language preference for a user ('hy' or 'ru'). Defaults to 'hy'."""
+    return USER_SETTINGS.get(user_id, {}).get("language", "hy")
+
+async def set_user_language(user_id: int, lang: str) -> None:
+    """Persist language preference for user in DB and cache."""
+    current = USER_SETTINGS.get(user_id, {})
+    USER_SETTINGS[user_id] = {"location": current.get("location", DEFAULT_LOCATION), "language": lang}
+    pool = await get_db_pool()
+    if pool:
+        try:
+            async with pool.acquire() as conn:
+                await conn.execute(
+                    """INSERT INTO user_settings (user_id, active_location, language)
+                       VALUES ($1, 'GN', $2)
+                       ON CONFLICT (user_id) DO UPDATE SET language = $2""",
+                    user_id, lang
+                )
+        except Exception as e:
+            print(f"set_user_language error: {e}")
+
 
 def transliterate_name(text: str) -> str:
     if re.search(r'[а-яА-ЯеЁ]', text):
@@ -753,9 +867,13 @@ def transliterate_name(text: str) -> str:
 async def cmd_addprob(message: types.Message):
     if message.from_user.id not in KNOWN_USERS and message.from_user.id != ADMIN_ID:
         return
-        
-    parts = message.text.split()
-    if len(parts) != 5:
+
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
+    loc  = await get_user_location(message.from_user.id)
+
+    cmd_parts = message.text.split()
+    if len(cmd_parts) != 5:
         await message.answer(
             "❌ **Սխալ ձևաչափ**\n\n"
             "Օգտագործեք՝ `/addprob <հեռախոս> <տեսակ> <ամսաթիվ> <ժամ>`\n"
@@ -764,61 +882,65 @@ async def cmd_addprob(message: types.Message):
             parse_mode="Markdown"
         )
         return
-        
-    phone_raw = parts[1]
-    lesson_type = parts[2].lower()
-    date_raw = parts[3]
-    time_raw = parts[4]
-    
+
+    phone_raw   = cmd_parts[1]
+    lesson_type = cmd_parts[2].lower()
+    date_raw    = cmd_parts[3]
+    time_raw    = cmd_parts[4]
+
     if lesson_type not in ['mk', 'lg']:
         await message.answer("❌ Սխալ տեսակ: Օգտագործեք `mk` կամ `lg`:")
         return
-        
-    subject_id = 23 if lesson_type == 'mk' else 24
+
+    subject_id  = 23 if lesson_type == 'mk' else 24
     lesson_name = "MakeBlock" if lesson_type == 'mk' else "LEGO Education"
-    
-    status_msg = await message.answer("🔄 Փնտրում եմ...")
-    
-    # 1. Search customer
-    customer = await get_alfacrm_customer_by_phone(phone_raw)
+    # room_ids for the user's active location (filter lessons to correct location)
+    room_ids = [v for v in loc["rooms"].values() if v is not None]
+
+    status_msg = await message.answer(t("addprob_searching", lang))
+
+    # 1. Search customer filtered by location prefix
+    customer = await get_alfacrm_customer_by_phone(phone_raw, crm_prefix=loc["crm_prefix"])
     if not customer:
-        await status_msg.edit_text(f"❌ Լիդ կամ հաճախորդ {phone_raw} համարով չգտնվեց:")
+        await status_msg.edit_text(t("addprob_not_found", lang, phone=phone_raw))
         return
-        
-    customer_id = customer.get("id")
+
+    customer_id        = customer.get("id")
     customer_name_full = customer.get("name", "Անհայտ")
-    
-    # 2. Find specific lesson
-    lesson = await get_alfacrm_lesson(date_raw, time_raw, subject_id)
+
+    # 2. Find specific lesson filtered by location rooms
+    lesson = await get_alfacrm_lesson(
+        date_raw, time_raw, subject_id,
+        room_ids=room_ids if room_ids else None
+    )
     if not lesson:
-        y = datetime.now().year
-        parts = date_raw.split('.')
-        d_f = f"{date_raw}.{y}" if len(parts) == 2 else date_raw
+        d_parts_l = date_raw.split('.')
+        d_f = f"{date_raw}.{datetime.now().year}" if len(d_parts_l) == 2 else date_raw
         t_f = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
-        await status_msg.edit_text(f"❌ Փորձնական խմբային դաս «{lesson_name}» նշված ժամին ({d_f} {t_f}) չգտնվեց:\n\n**Առկա դասեր այս օրը (Տիպ 3/9):**\n`{debug_str}`")
+        await status_msg.edit_text(t("addprob_no_lesson", lang, lesson=lesson_name, dt=f"{d_f} {t_f}"))
         return
-        
+
     lesson_id = lesson.get("id")
     # 3. Add to lesson
     success, result_msg = await add_customer_to_lesson(lesson_id, lesson, customer_id)
-    
+
     if success:
         if result_msg == "already_added":
-            await status_msg.edit_text(f"⚠️ Աշակերտը ({customer_name_full}) արդեն գրանցված է այս դասին:")
+            await status_msg.edit_text(t("addprob_already", lang, name=customer_name_full))
         else:
-            y = datetime.now().year
-            d_formatted = f"{date_raw}.{y}" if len(date_raw.split('.')) == 2 else date_raw
+            d_parts_l   = date_raw.split('.')
+            d_formatted = f"{date_raw}.{datetime.now().year}" if len(d_parts_l) == 2 else date_raw
             t_formatted = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
             await status_msg.edit_text(
-                f"✅ **Հաջողությամբ ավելացվեց!**\n\n"
-                f"👤 **Աշակերտ:** {customer_name_full}\n"
-                f"📚 **Դաս:** Փորձնական {lesson_name}\n"
-                f"📅 **Ժամանակ:** {d_formatted} {t_formatted}\n"
-                f"📍 **Լոկացիա:** Գարեգին Նժդեհ",
+                t("addprob_added", lang,
+                  student=customer_name_full,
+                  lesson=lesson_name,
+                  dt=f"{d_formatted} {t_formatted}",
+                  loc=loc["name"]),
                 parse_mode="Markdown"
             )
     else:
-        await status_msg.edit_text(f"❌ Սխալ դասին ավելացնելիս: {result_msg}")
+        await status_msg.edit_text(t("addprob_error", lang, msg=result_msg))
 
 @dp.message(Command("addprobk"))
 async def cmd_addprobk(message: types.Message):
@@ -979,7 +1101,161 @@ async def cmd_help(message: types.Message):
         parse_mode="Markdown"
     )
 
+# ─────────────────────── /branch ──────────────────────────────────────────────
+@dp.message(Command("branch"))
+async def cmd_branch(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
+    args = message.text.split()
+
+    if len(args) >= 2:
+        # /branch gn | /branch k | /branch s
+        raw  = " ".join(args[1:]).lower().strip()
+        code = resolve_alias(raw)
+        if not code:
+            await message.answer(
+                t("location_invalid", lang, code=raw),
+                parse_mode="Markdown"
+            )
+            return
+        await set_user_location(message.from_user.id, code)
+        loc_cfg = get_location(code)
+        await message.answer(
+            t("location_set", lang, name=loc_cfg["name"]),
+            parse_mode="Markdown"
+        )
+        return
+
+    # /branch without args → show current + inline buttons
+    loc_cfg = await get_user_location(message.from_user.id)
+    builder = InlineKeyboardBuilder()
+    for code, cfg in LOCATIONS.items():
+        label = f"{'✅ ' if code == loc_cfg['code'] else ''}{cfg['name']}"
+        builder.button(text=label, callback_data=f"loc_{code}")
+    builder.adjust(1)
+    await message.answer(
+        t("location_current", lang, name=loc_cfg["name"]),
+        parse_mode="Markdown",
+        reply_markup=builder.as_markup()
+    )
+
+@dp.callback_query(F.data.startswith("loc_"))
+async def callback_set_location(callback: types.CallbackQuery):
+    await ensure_db()
+    code    = callback.data[4:]  # "loc_GN" → "GN"
+    loc_cfg = get_location(code)
+    lang    = await get_user_language(callback.from_user.id)
+    if not loc_cfg:
+        await callback.answer("❌ Unknown location", show_alert=True)
+        return
+    await set_user_location(callback.from_user.id, code)
+    await callback.answer(f"✅ {loc_cfg['name']}")
+    # Rebuild keyboard with updated checkmark
+    builder = InlineKeyboardBuilder()
+    for c, cfg in LOCATIONS.items():
+        label = f"{'✅ ' if c == code else ''}{cfg['name']}"
+        builder.button(text=label, callback_data=f"loc_{c}")
+    builder.adjust(1)
+    await callback.message.edit_text(
+        t("location_current", lang, name=loc_cfg["name"]),
+        parse_mode="Markdown",
+        reply_markup=builder.as_markup()
+    )
+
+# ─────────────────────── /language ────────────────────────────────────────────
+@dp.message(Command("language"))
+async def cmd_language(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
+    builder = InlineKeyboardBuilder()
+    builder.button(text=f"{'✅ ' if lang == 'hy' else ''}🇦🇲 Հայերեն", callback_data="lang_hy")
+    builder.button(text=f"{'✅ ' if lang == 'ru' else ''}🇷🇺 Русский", callback_data="lang_ru")
+    builder.adjust(2)
+    await message.answer(
+        t("language_choose", lang),
+        reply_markup=builder.as_markup()
+    )
+
+@dp.callback_query(F.data.startswith("lang_"))
+async def callback_set_language(callback: types.CallbackQuery):
+    await ensure_db()
+    new_lang = callback.data[5:]  # "lang_hy" → "hy"
+    await set_user_language(callback.from_user.id, new_lang)
+    await callback.answer(t("language_set", new_lang))
+    builder = InlineKeyboardBuilder()
+    builder.button(text=f"{'✅ ' if new_lang == 'hy' else ''}🇦🇲 Հայերեն", callback_data="lang_hy")
+    builder.button(text=f"{'✅ ' if new_lang == 'ru' else ''}🇷🇺 Русский", callback_data="lang_ru")
+    builder.adjust(2)
+    await callback.message.edit_text(
+        t("language_set", new_lang),
+        reply_markup=builder.as_markup()
+    )
+
+# ─────────────────────── /khelp ───────────────────────────────────────────────
+@dp.message(Command("khelp"))
+async def cmd_khelp(message: types.Message):
+    await message.answer(
+        "📋 **Комитас — Команды**\n\n"
+        "🔧 **Задачи:**\n"
+        "/kaddtask [текст] — Создать задачу (локация: Комитас)\n"
+        "/kchecktasks — Активные задачи Комитаса\n\n"
+        "📞 **CRM / Sales:**\n"
+        "/addprobk [тел] [mk/lg] [дата] [час] — Создать индивидуальный пробный урок\n\n"
+        "⚙️ **Настройки:**\n"
+        "/branch — Сменить активную локацию\n"
+        "/language — Сменить язык интерфейса",
+        parse_mode="Markdown"
+    )
+
+# ─────────────────────── /kaddtask ────────────────────────────────────────────
+@dp.message(Command("kaddtask"))
+async def cmd_kaddtask(message: types.Message):
+    task_description = message.text.replace("/kaddtask", "", 1).strip()
+    if not task_description:
+        await message.answer("Խնդրում ենք նշել առաջադրանքի նկարագրությունը: Օրինակ՝ /kaddtask Ջնջել խումբը")
+        return
+    if not POSTGRES_URL:
+        await message.answer("Բազան միացված չէ (POSTGRES_URL is missing):")
+        return
+
+    await ensure_db()
+    await add_task(task_description, location="K")
+    await message.answer("✅ Komitas — Arajadrankhy avelajvac e:")
+
+    user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
+    task_msg  = f"📌 **Нoр Komitas задача!**\n\n👤 Ավelacреc: {user_info}\n🔹 {task_description}"
+    target_users = set(KNOWN_USERS).union(EXECUTORS.keys())
+    for u_id in target_users:
+        try:
+            await bot.send_message(u_id, task_msg, parse_mode="Markdown")
+        except Exception as e:
+            print(f"Failed to send kaddtask notification to {u_id}: {e}")
+
+# ─────────────────────── /kchecktasks ─────────────────────────────────────────
+@dp.message(Command("kchecktasks"))
+async def cmd_kchecktasks(message: types.Message):
+    if not POSTGRES_URL:
+        await message.answer("Բազան միացված չէ (POSTGRES_URL is missing):")
+        return
+
+    await ensure_db()
+    tasks = await get_tasks(location="K")
+    if not tasks:
+        await message.answer("Komitas — Arajadrankhneri tsanky datar e:")
+        return
+
+    response = "📝 **Komitas — Arajadrankhneri tsank:**\n\n"
+    builder  = InlineKeyboardBuilder()
+    for task in tasks:
+        t_id   = task['id']
+        t_desc = task['description']
+        response += f"🔹 **Task{t_id}** - {t_desc}\n"
+        builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_K_{t_id}")
+    builder.adjust(2)
+    await message.answer(response, parse_mode="Markdown", reply_markup=builder.as_markup())
+
 import json
+
 
 def get_mapping(filename):
     try:
@@ -1164,28 +1440,46 @@ async def cmd_myschedule(message: types.Message):
 
 @dp.message(Command("prob"))
 async def cmd_prob(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
+    loc  = await get_user_location(message.from_user.id)
+
+    schedule = PROB_SCHEDULES.get(loc["code"])
+    if not schedule:
+        await message.answer(t("prob_no_schedule", lang, loc=loc["name"]))
+        return
+
     tz = zoneinfo.ZoneInfo("Asia/Yerevan")
     today_weekday = datetime.now(tz).weekday()
-    
-    day_name, schedule = PROB_SCHEDULE[today_weekday]
-    
+    day_name, day_schedule = schedule[today_weekday]
+
     text = (
-        "G.N (ՃԻՇՏ մասնաճյուղ)\n"
+        f"{loc['name']} (ՃԻՇՏ մասնաճյուղ)\n"
         "——————————————————————————\n"
         f"🔹 {day_name}\n"
-        f"{schedule}\n"
+        f"{day_schedule}\n"
         "——————————————————————————"
     )
     await message.answer(text)
 
 @dp.message(Command("proball"))
 async def cmd_proball(message: types.Message):
-    text = "G.N (ՃԻՇՏ մասնաճյուղ)\n——————————————————————————\n"
-    for i in range(6): # Пн-Сб
-        day_name, schedule = PROB_SCHEDULE[i]
-        text += f"🔹 {day_name}\n{schedule}\n——————————————————————————\n"
-        
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
+    loc  = await get_user_location(message.from_user.id)
+
+    schedule = PROB_SCHEDULES.get(loc["code"])
+    if not schedule:
+        await message.answer(t("prob_no_schedule", lang, loc=loc["name"]))
+        return
+
+    text = f"{loc['name']} (ՃԻՇՏ մասնաճյուղ)\n——————————————————————————\n"
+    for i in range(6):  # Пн-Сб
+        day_name, day_schedule = schedule[i]
+        text += f"🔹 {day_name}\n{day_schedule}\n——————————————————————————\n"
+
     await message.answer(text)
+
 
 @dp.message(Command("getweek"))
 async def cmd_getweek(message: types.Message):
@@ -1471,7 +1765,8 @@ async def cmd_addtask(message: types.Message):
         return
 
     await ensure_db()
-    await add_task(task_description)
+    loc = await get_user_location(message.from_user.id)
+    await add_task(task_description, location=loc["code"])
     await message.answer("Առաջադրանքը ավելացված է:")
 
     user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
@@ -1502,19 +1797,20 @@ async def cmd_checktasks(message: types.Message):
         return
 
     await ensure_db()
-    tasks = await get_tasks()
+    loc = await get_user_location(message.from_user.id)
+    tasks = await get_tasks(location=loc["code"])
     if not tasks:
         await message.answer("Առաջադրանքների ցանկը դատարկ է:")
         return
         
-    response = "📝 **Առաջադրանքների ցանկ:**\n\n"
+    response = f"📝 **{loc['name']} — Առաջադրանքների ցանկ:**\n\n"
     builder = InlineKeyboardBuilder()
     
     for task in tasks:
         t_id = task['id']
         t_desc = task['description']
         response += f"🔹 **Task{t_id}** - {t_desc}\n"
-        builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_{t_id}")
+        builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_{loc['code']}_{t_id}")
     builder.adjust(2)
         
     await message.answer(response, parse_mode="Markdown", reply_markup=builder.as_markup())
@@ -1522,8 +1818,16 @@ async def cmd_checktasks(message: types.Message):
 @dp.callback_query(F.data.startswith("complete_"))
 async def callback_complete_task(callback: types.CallbackQuery):
     await ensure_db()
-    task_id = int(callback.data.split("_")[1])
     
+    # Support both "complete_GN_5" (new) and "complete_5" (legacy)
+    raw_parts = callback.data.split("_")
+    if len(raw_parts) == 3:
+        cb_location = raw_parts[1]  # "GN", "K", etc.
+        task_id     = int(raw_parts[2])
+    else:
+        cb_location = "GN"
+        task_id     = int(raw_parts[1])
+        
     task_desc = await delete_task(task_id)
     if not task_desc:
         await callback.answer("Այս առաջադրանքը արդեն կատարված է կամ ջնջված։", show_alert=True)
@@ -1540,19 +1844,20 @@ async def callback_complete_task(callback: types.CallbackQuery):
             except Exception as e:
                 print(f"Failed to send task completion notification to {u_id}: {e}")
                 
-    tasks = await get_tasks()
+    tasks = await get_tasks(location=cb_location)
     if not tasks:
         await callback.message.edit_text("🎉 Բոլոր առաջադրանքները կատարված են։", parse_mode="Markdown")
         return
         
-    response = "📝 **Առաջադրանքների ցանկ:**\n\n"
+    loc_name = (get_location(cb_location) or {}).get("name", cb_location)
+    response = f"📝 **{loc_name} — Առաջադրանքների ցանկ:**\n\n"
     builder = InlineKeyboardBuilder()
     
     for task in tasks:
         t_id = task['id']
         t_desc = task['description']
         response += f"🔹 **Task{t_id}** - {t_desc}\n"
-        builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_{t_id}")
+        builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_{cb_location}_{t_id}")
     builder.adjust(2)
         
     await callback.message.edit_text(response, parse_mode="Markdown", reply_markup=builder.as_markup())
@@ -1588,12 +1893,16 @@ async def cmd_task_hint(message: types.Message):
 
 @dp.message(Command("add"))
 async def cmd_add_student_to_group(message: types.Message):
+    await ensure_db()
+    loc  = await get_user_location(message.from_user.id)
+    lang = await get_user_language(message.from_user.id)
+    
     raw_args = message.text.replace("/add", "", 1).strip()
     
     if not raw_args:
         await message.answer(
-            "👥 **Ավելացնել աշակերտին խմբում (Alfa CRM - Գարեգին Նժդեհ):**\n\n"
-            "⚠️ **Ուշադրություն!** Խումբը և աշակերտը պետք է CRM-ում ունենան **G.N** պրեֆիքս:\n\n"
+            f"👥 **Ավելացնել աշակերտին խմբում (Alfa CRM - {loc['name']}):**\n\n"
+            f"⚠️ **Ուշադրություն!** Խումբը և աշակերտը պետք է CRM-ում ունենան **{loc['crm_prefix']}** պրեֆիքս:\n\n"
             "Խնդրում ենք գրել հետևյալ ձևաչափով՝\n"
             "👉 `/add Saakyan Gexam Lego 1`\n\n"
             "**Օրինակներ՝**\n"
@@ -1604,7 +1913,7 @@ async def cmd_add_student_to_group(message: types.Message):
         )
         return
 
-    status_msg = await message.answer("🔄 Փնտրում եմ խումբը և աշակերտին Alfa CRM-ում (Գարեգին Նժդեհ)...")
+    status_msg = await message.answer(f"🔄 Փնտրում եմ խումբը և աշակերտին Alfa CRM-ում ({loc['name']})...")
     
     # 1. Fetch all groups in 1 single HTTP request
     all_groups = await get_all_alfacrm_groups()
@@ -1684,7 +1993,7 @@ async def cmd_add_student_to_group(message: types.Message):
     if c_id is not None:
         customer = await get_alfacrm_customer_by_id(c_id)
     else:
-        customer = await get_alfacrm_customer_by_name(student_query)
+        customer = await get_alfacrm_customer_by_name(student_query, crm_prefix=loc["crm_prefix"])
 
     if not customer:
         await status_msg.edit_text(
@@ -1698,20 +2007,20 @@ async def cmd_add_student_to_group(message: types.Message):
     customer_name = customer.get("name") or customer.get("legal_name", "Աշակերտ")
     customer_id = customer.get("id")
 
-    # Check G.N prefix for group
-    if "G.N" not in group_name.upper():
+    # Check location prefix for group
+    if not (group_name.upper().startswith(f"{loc['crm_prefix']} |") or group_name.upper().startswith(f"{loc['crm_prefix']}|")):
         await status_msg.edit_text(
-            f"⚠️ **«{group_name}» խումբը չունի «G.N» պրեֆիքս!**\n\n"
-            f"Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում խմբի անվանման սկզբում ավելացնել «G.N» (օրինակ՝ `G.N | {group_name}`) և կրկնել հրամանը:",
+            f"⚠️ **«{group_name}» խումբը չունի «{loc['crm_prefix']}» պրեֆիքս!**\n\n"
+            f"Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում խմբի անվանման սկզբում ավելացնել «{loc['crm_prefix']}» (օրինակ՝ `{loc['crm_prefix']} | {group_name}`) և կրկնել հրամանը:",
             parse_mode="Markdown"
         )
         return
 
-    # Check G.N prefix for student
-    if "G.N" not in customer_name.upper():
+    # Check location prefix for student
+    if not (customer_name.upper().startswith(f"{loc['crm_prefix']} |") or customer_name.upper().startswith(f"{loc['crm_prefix']}|")):
         await status_msg.edit_text(
-            f"⚠️ **«{customer_name}» աշակերտը չունի «G.N» պրեֆիքս!**\n\n"
-            f"Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում աշակերտի անվանման սկզբում ավելացնել «G.N» (օրինակ՝ `G.N | {customer_name}`) և կրկնել հրամանը:",
+            f"⚠️ **«{customer_name}» աշակերտը չունի «{loc['crm_prefix']}» պրեֆիքս!**\n\n"
+            f"Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում աշակերտի անվանման սկզբում ավելացնել «{loc['crm_prefix']}» (օրինակ՝ `{loc['crm_prefix']} | {customer_name}`) և կրկնել հրամանը:",
             parse_mode="Markdown"
         )
         return
@@ -2039,6 +2348,10 @@ async def process_payment(message: types.Message):
         return
         
     executor_name = EXECUTORS[message.from_user.id]
+    
+    await ensure_db()
+    loc  = await get_user_location(message.from_user.id)
+    lang = await get_user_language(message.from_user.id)
 
     ERROR_INSTRUCTION = (
         "❌ **Սխալ ձևաչափ**\n\n"
@@ -2076,7 +2389,7 @@ async def process_payment(message: types.Message):
                     return
                     
                 payer_name = customer.get("legal_name") or customer.get("name", "Անհայտ")
-                success = await create_alfacrm_payment(customer_id, pending['amount'], pending['method_raw'], payer_name)
+                success = await create_alfacrm_payment(customer_id, pending['amount'], pending['method_raw'], payer_name, location_config=loc)
                 
                 if success:
                     tz = zoneinfo.ZoneInfo("Asia/Yerevan")
@@ -2121,11 +2434,11 @@ async def process_payment(message: types.Message):
     name_russian = transliterate_name(name_english)
     payment_method = PAYMENT_METHODS.get(payment_method_raw, payment_method_raw)
     
-    response_text = f"Платеж обработал(а): {executor_name}\nG.N | {name_russian} | {payment_sum} | {payment_method}"
+    response_text = f"Платеж обработал(а): {executor_name}\n{loc['crm_prefix']} | {name_russian} | {payment_sum} | {payment_method}"
     
     processing_msg = await message.answer("🔄 Փնտրում եմ աշակերտին CRM-ում...")
     
-    customer = await get_alfacrm_customer_by_name(name_russian)
+    customer = await get_alfacrm_customer_by_name(name_russian, crm_prefix=loc["crm_prefix"])
     
     if not customer:
         await processing_msg.edit_text("❌ Աշակերտը չգտնվեց Alfa CRM-ում: Վճարումը հաստատելու համար խնդրում ենք ուղարկել նրա CRM անկետայի հղումը:")
@@ -2139,14 +2452,15 @@ async def process_payment(message: types.Message):
     customer_name = customer.get("name", "")
     customer_id = customer.get("id")
     
-    is_gn = False
-    if customer_name.startswith("G.N"):
-        is_gn = True
+    is_valid_loc = False
+    if customer_name.startswith(f"{loc['crm_prefix']} |") or customer_name.startswith(f"{loc['crm_prefix']}|"):
+        is_valid_loc = True
     else:
-        is_gn = await check_customer_rooms(customer_id)
+        valid_rooms = [v for v in loc["rooms"].values() if v is not None]
+        is_valid_loc = await check_customer_rooms(customer_id, valid_rooms=valid_rooms)
         
-    if not is_gn:
-        await processing_msg.edit_text(f"❌ Գտնվել է «{customer_name}» աշակերտը, բայց նա Գարեգին Նժդեհ մասնաճյուղից չէ: Վճարումը հաստատելու համար ուղարկեք նրա CRM անկետայի հղումը:")
+    if not is_valid_loc:
+        await processing_msg.edit_text(f"❌ Գտնվել է «{customer_name}» աշակերտը, բայց նա {loc['name']} մասնաճյուղից չէ: Վճարումը հաստատելու համար ուղարկեք նրա CRM անկետայի հղումը:")
         PENDING_PAYMENTS[message.from_user.id] = {
             'amount': amount_int,
             'method_raw': payment_method_raw,
@@ -2155,7 +2469,7 @@ async def process_payment(message: types.Message):
         return
         
     payer_name = customer.get("legal_name") or customer_name
-    success = await create_alfacrm_payment(customer_id, amount_int, payment_method_raw, payer_name)
+    success = await create_alfacrm_payment(customer_id, amount_int, payment_method_raw, payer_name, location_config=loc)
     
     if success:
         tz = zoneinfo.ZoneInfo("Asia/Yerevan")
