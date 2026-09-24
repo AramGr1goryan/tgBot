@@ -874,13 +874,7 @@ async def cmd_addprob(message: types.Message):
 
     cmd_parts = message.text.split()
     if len(cmd_parts) != 5:
-        await message.answer(
-            "❌ **Սխալ ձևաչափ**\n\n"
-            "Օգտագործեք՝ `/addprob <հեռախոս> <տեսակ> <ամսաթիվ> <ժամ>`\n"
-            "Օրինակ՝ `/addprob 077000700 mk 21.09 15`\n\n"
-            "Տեսակներ՝ `mk` (MakeBlock) կամ `lg` (LEGO Education)",
-            parse_mode="Markdown"
-        )
+        await message.answer(t("addprob_format", lang), parse_mode="Markdown")
         return
 
     phone_raw   = cmd_parts[1]
@@ -889,7 +883,7 @@ async def cmd_addprob(message: types.Message):
     time_raw    = cmd_parts[4]
 
     if lesson_type not in ['mk', 'lg']:
-        await message.answer("❌ Սխալ տեսակ: Օգտագործեք `mk` կամ `lg`:")
+        await message.answer(t("invalid_type", lang))
         return
 
     subject_id  = 23 if lesson_type == 'mk' else 24
@@ -906,7 +900,7 @@ async def cmd_addprob(message: types.Message):
         return
 
     customer_id        = customer.get("id")
-    customer_name_full = customer.get("name", "Անհայտ")
+    customer_name_full = customer.get("name", t("unknown", lang))
 
     # 2. Find specific lesson filtered by location rooms
     lesson = await get_alfacrm_lesson(
@@ -947,15 +941,13 @@ async def cmd_addprobk(message: types.Message):
     if message.from_user.id not in KNOWN_USERS and message.from_user.id != ADMIN_ID:
         return
         
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
+    loc = await get_user_location(message.from_user.id)
+        
     parts = message.text.split()
     if len(parts) != 5:
-        await message.answer(
-            "❌ **Սխալ ձևաչափ**\n\n"
-            "Օգտագործեք՝ `/addprobk <հեռախոս> <տեսակ> <ամսաթիվ> <ժամ>`\n"
-            "Օրինակ՝ `/addprobk 077000700 mk 21.09 15`\n\n"
-            "Տեսակներ՝ `mk` (MakeBlock) կամ `lg` (LEGO Education)",
-            parse_mode="Markdown"
-        )
+        await message.answer(t("addprobk_format", lang), parse_mode="Markdown")
         return
         
     phone_raw = parts[1]
@@ -964,23 +956,23 @@ async def cmd_addprobk(message: types.Message):
     time_raw = parts[4].replace("։", ":")
     
     if lesson_type not in ['mk', 'lg']:
-        await message.answer("❌ Սխալ տեսակ: Օգտագործեք `mk` կամ `lg`:")
+        await message.answer(t("invalid_type", lang))
         return
         
     subject_id = 23 if lesson_type == 'mk' else 24
     room_id = 31 if lesson_type == 'mk' else 30
     lesson_name = "MakeBlock" if lesson_type == 'mk' else "LEGO Education"
     
-    status_msg = await message.answer("🔄 Ստեղծում եմ (Կոմիտաս)...")
+    status_msg = await message.answer(t("addprobk_creating", lang, loc=loc["name"]))
     
     # 1. Search customer
     customer = await get_alfacrm_customer_by_phone(phone_raw)
     if not customer:
-        await status_msg.edit_text(f"❌ Լիդ կամ հաճախորդ {phone_raw} համարով չգտնվեց:")
+        await status_msg.edit_text(t("addprob_not_found", lang, phone=phone_raw))
         return
         
     customer_id = customer.get("id")
-    customer_name_full = customer.get("name", "Անհայտ")
+    customer_name_full = customer.get("name", t("unknown", lang))
     
     # 2. Create new individual lesson
     success, result_msg = await create_alfacrm_individual_lesson(date_raw, time_raw, subject_id, room_id, customer_id)
@@ -990,47 +982,49 @@ async def cmd_addprobk(message: types.Message):
         d_formatted = f"{date_raw}.{y}" if len(date_raw.split('.')) == 2 else date_raw
         t_formatted = f"{time_raw}:00" if len(time_raw) == 2 else time_raw
         await status_msg.edit_text(
-            f"✅ **Հաջողությամբ պլանավորվեց!**\n\n"
-            f"👤 **Աշակերտ:** {customer_name_full}\n"
-            f"📚 **Դաս:** Անհատական փորձնական {lesson_name}\n"
-            f"📅 **Ժամանակ:** {d_formatted} {t_formatted}\n"
-            f"📍 **Լոկացիա:** Կոմիտաս",
+            t("addprob_added", lang,
+              student=customer_name_full,
+              lesson=lesson_name,
+              dt=f"{d_formatted} {t_formatted}",
+              loc=loc["name"]),
             parse_mode="Markdown"
         )
     else:
         err_msg = result_msg
         if "Аудитория занята" in result_msg:
-            err_msg = "Լսարանը զբաղված է այդ ժամին"
+            err_msg = t("room_busy", lang)
         elif "Неверный формат" in result_msg or "Необходимо заполнить" in result_msg:
-            err_msg = "Սխալ ձևաչափ կամ բացակայող տվյալներ"
-        await status_msg.edit_text(f"❌ Սխալ դասը ստեղծելիս: {err_msg}")
+            err_msg = t("bad_format", lang)
+        await status_msg.edit_text(t("addprobk_err_create", lang, msg=err_msg))
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     await message.answer(
-        "Ողջույն: Որպեսզի ես կարողանամ ուղարկել վճարումները խմբին, ինձ անհրաժեշտ է իմանալ ձեր անունը:\n\n"
-        "Գրեք ձեր անունը ռուսերենով (օրինակ՝ Рипсиме):",
+        t("start_msg", lang),
         reply_markup=ForceReply(selective=True)
     )
 
 def is_name_reply(message: types.Message) -> bool:
     if not message.reply_to_message or not message.reply_to_message.text:
         return False
-    return "Գրեք ձեր անունը ռուսերենով" in message.reply_to_message.text
+    return "Рипсиме" in message.reply_to_message.text or "Рипсиме" in message.reply_to_message.text
 
 @dp.message(is_name_reply)
 async def process_name_registration(message: types.Message):
     name = message.text.strip()
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     
     # Проверка на то, что имя написано русскими буквами
     if not re.match(r'^[А-Яа-яЁё\s]+$', name):
         await message.answer(
-            "Խնդրում ենք գրել միայն ռուսերեն տառերով (օրինակ՝ Рипсиме):",
+            t("start_req_ru", lang),
             reply_markup=ForceReply(selective=True)
         )
         return
         
-    await ensure_db()
     conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     await conn.execute(
         "INSERT INTO executors (user_id, name) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET name = EXCLUDED.name",
@@ -1039,11 +1033,7 @@ async def process_name_registration(message: types.Message):
     await conn.close()
     
     EXECUTORS[message.from_user.id] = name
-    await message.answer(
-        f"✅ Ձեր անունը պահպանված է որպես '{name}':\n\n"
-        "Այժմ կարող եք ուղարկել հաղորդագրություններ վճարումների համար հետևյալ ձևաչափով՝\n"
-        "Անուն Ազգանուն Գումար Վճարման_Եղանակ"
-    )
+    await message.answer(t("start_success", lang, name=name))
 
 @dp.message(Command("getid"))
 async def cmd_getid(message: types.Message):
@@ -1053,56 +1043,14 @@ async def cmd_getid(message: types.Message):
     )
 
 @dp.message(Command("about"))
-@dp.message(Command("about"))
 async def cmd_about(message: types.Message):
-    await message.answer(
-        "🤖 **Ադմինիստրատորի Օգնական (Admin Helper)**\n\n"
-        "Այս բոտը ստեղծված է RobixLab-ի մենեջերների, ադմինների և ուսուցիչների աշխատանքը հեշտացնելու համար՝ տարբեր մասնաճյուղերում:\n\n"
-        "👑 **Մենեջերներ և Ադմիններ**\n"
-        "• Վճարումների ավտոմատ գրանցում տարբեր կասսաներում (ըստ մասնաճյուղի):\n"
-        "• Մասնաճյուղի առաջադրանքների (Task) ստեղծում և կառավարում:\n"
-        "• Ամենօրյա ավտոմատ հիշեցումներ չկատարված առաջադրանքների մասին:\n"
-        "• Օգտատերերի կառավարում:\n\n"
-        "📞 **Վաճառքի բաժին (Sales / Alfa CRM)**\n"
-        "• Փորձնական դասերի գրանցումների դիտում և ավելացում ըստ ընտրված մասնաճյուղի:\n"
-        "• Աշակերտների ավելացում խմբերում ճիշտ պրեֆիքսներով (/add):\n\n"
-        "⚙️ **Կարգավորումներ**\n"
-        "• /branch — Ընտրել կամ փոխել ակտիվ մասնաճյուղը:\n"
-        "• /language — Փոխել լեզուն (Հայերեն/Русский):\n\n"
-        "Ամբողջական հրամանների համար գրեք /help:\n\n" 
-        "Բոտը ստեղծվել է Արամ Գրիգորյանի կողմից։",
-        parse_mode="Markdown"
-    )
+    lang = await get_user_language(message.from_user.id)
+    await message.answer(t("about_msg", lang), parse_mode="Markdown")
 
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
-    await message.answer(
-        "📋 **Հրամանների ցանկ**\n\n"
-        "👑 **Մենեջերներ և Ադմիններ**\n"
-        "• **Վճարում**՝ գրեք տեքստով (օրինակ՝ `Aram Grigoryan 50000 N`)\n"
-        "  (N-կանխիկ, b.n-տերմինալ, c-քարտ)\n"
-        "/addtask [տեքստ] - Ստեղծել առաջադրանք ընթացիկ մասնաճյուղի համար\n"
-        "/checktasks - Ցուցադրել ընթացիկ մասնաճյուղի առաջադրանքները\n"
-        "/getusers - Բոլոր օգտատերերի ցանկ\n"
-        "/ban [ID] - Բլոկավորել\n"
-        "/unban [ID] - Ապաբլոկավորել\n\n"
-        "📞 **Վաճառքի բաժին (Sales / Alfa CRM)**\n"
-        "/add [Աշակերտ] [Խումբ] - Ավելացնել աշակերտին խմբում (ստուգում է պրեֆիքսը)\n"
-        "/addprob [հեռախոս] [mk/lg] [օր] [ժամ] - Գրանցել խմբային փորձնականին\n"
-        "/addprobk [հեռախոս] [mk/lg] [օր] [ժամ] - Ստեղծել անհատական փորձնական\n"
-        "/prob - Այսօրվա փորձնական դասերը (ընթացիկ մասնաճյուղի)\n"
-        "/proball - Շաբաթվա փորձնական դասերը (ընթացիկ մասնաճյուղի)\n"
-        "/getprob - Այս շաբաթվա գրանցվածները\n"
-        "/getweek - Շաբաթվա գրանցվածները (Այսօր -> շաբաթ)\n"
-        "/freeprob - Ազատ տեղեր փորձնական դասի համար\n\n"
-        "⚙️ **Կարգավորումներ**\n"
-        "/branch - Սահմանել ակտիվ մասնաճյուղը\n"
-        "/language - Ընտրել լեզուն\n\n"
-        "🎓 **Ուսուցիչների բաժին**\n"
-        "/lego [թեմա] - Գտնել բաց թեմաներ (օրինակ՝ /lego Spider man)\n"
-        "/myschedule - Տեսնել սեփական դասացուցակը այսօրվա և վաղվա համար",
-        parse_mode="Markdown"
-    )
+    lang = await get_user_language(message.from_user.id)
+    await message.answer(t("help_msg", lang), parse_mode="Markdown")
 
 # ─────────────────────── /branch ──────────────────────────────────────────────
 @dp.message(Command("branch"))
@@ -1197,36 +1145,28 @@ async def callback_set_language(callback: types.CallbackQuery):
 # ─────────────────────── /khelp ───────────────────────────────────────────────
 @dp.message(Command("khelp"))
 async def cmd_khelp(message: types.Message):
-    await message.answer(
-        "📋 **Կոմիտաս — Հրամաններ**\n\n"
-        "🔧 **Առաջադրանքներ:**\n"
-        "/kaddtask [տեքստ] — Ստեղծել առաջադրանք (մասնաճյուղ՝ Կոմիտաս)\n"
-        "/kchecktasks — Կոմիտասի ակտիվ առաջադրանքները\n\n"
-        "📞 **CRM / Sales:**\n"
-        "/addprobk [հեռ.] [mk/lg] [օր] [ժամ] — Ստեղծել անհատական փորձնական դաս\n\n"
-        "⚙️ **Կարգավորումներ:**\n"
-        "/branch — Փոխել ակտիվ մասնաճյուղը\n"
-        "/language — Փոխել ինտերֆեյսի լեզուն",
-        parse_mode="Markdown"
-    )
+    lang = await get_user_language(message.from_user.id)
+    await message.answer(t("khelp_msg", lang), parse_mode="Markdown")
 
 # ─────────────────────── /kaddtask ────────────────────────────────────────────
 @dp.message(Command("kaddtask"))
 async def cmd_kaddtask(message: types.Message):
     task_description = message.text.replace("/kaddtask", "", 1).strip()
+    lang = await get_user_language(message.from_user.id)
     if not task_description:
-        await message.answer("Խնդրում ենք նշել առաջադրանքի նկարագրությունը: Օրինակ՝ /kaddtask Ջնջել խումբը")
+        await message.answer(t("task_desc_req", lang))
         return
     if not POSTGRES_URL:
-        await message.answer("Բազան միացված չէ (POSTGRES_URL is missing):")
+        await message.answer(t("no_db", lang))
         return
 
     await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     await add_task(task_description, location="K")
-    await message.answer("✅ Կոմիտաս — Առաջադրանքը ավելացված է:")
+    await message.answer(t("kaddtask_success", lang))
 
     user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-    task_msg  = f"📌 **Նոր առաջադրանք (Կոմիտաս)!**\n\n👤 Ավելացրեց՝ {user_info}\n🔹 {task_description}"
+    task_msg  = t("kaddtask_notify", lang, user=user_info, desc=task_description)
     target_users = set(KNOWN_USERS).union(EXECUTORS.keys())
     for u_id in target_users:
         try:
@@ -1237,17 +1177,19 @@ async def cmd_kaddtask(message: types.Message):
 # ─────────────────────── /kchecktasks ─────────────────────────────────────────
 @dp.message(Command("kchecktasks"))
 async def cmd_kchecktasks(message: types.Message):
+    lang = await get_user_language(message.from_user.id)
     if not POSTGRES_URL:
-        await message.answer("Բազան միացված չէ (POSTGRES_URL is missing):")
+        await message.answer(t("no_db", lang))
         return
 
     await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     tasks = await get_tasks(location="K")
     if not tasks:
-        await message.answer("Կոմիտաս — Առաջադրանքների ցանկը դատարկ է:")
+        await message.answer(t("kchecktasks_empty", lang))
         return
 
-    response = "📝 **Կոմիտաս — Առաջադրանքների ցանկ:**\n\n"
+    response = t("kchecktasks_header", lang)
     builder  = InlineKeyboardBuilder()
     for task in tasks:
         t_id   = task['id']
@@ -1329,12 +1271,7 @@ async def check_uncompleted_lessons(bot: Bot, exclude_ids=None, override_ids=Non
                                 times.append(f"• {t_from} - {t_to}")
                         times_str = "\n".join(times)
                         
-                        text = (
-                            f"🔔 **Ուշադրություն**\n\n"
-                            f"Հարգելի {teacher_info['name']}, դուք ունեք **{count}** չնշված (պլանավորված) դաս այսօր ({today_str}):\n\n"
-                            f"**Ժամերը:**\n{times_str}\n\n"
-                            f"Խնդրում ենք մուտք գործել CRM և նշել դասերը որպես անցկացված:"
-                        )
+                        text = t("teacher_alert", "ru", name=teacher_info['name'], count=count, today=today_str, times=times_str)
                         try:
                             target_tg_id = override_ids.get(tg_id, tg_id)
                             await bot.send_message(target_tg_id, text, parse_mode="Markdown")
@@ -1350,15 +1287,17 @@ async def check_uncompleted_lessons(bot: Bot, exclude_ids=None, override_ids=Non
 async def cmd_testteacher(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
-    await message.answer("🔄 Սկսում եմ չնշված դասերի ստուգումը...")
+    lang = await get_user_language(message.from_user.id)
+    await message.answer(t("testteacher_start", lang))
     result = await check_uncompleted_lessons(bot, exclude_ids=[1037044744], override_ids={1071411870: 8954540927})
-    await message.answer(f"✅ Ստուգումն ավարտվեց:\nՈւղարկված նամակներ՝ {result.get('reminders_sent', 0)}")
+    await message.answer(t("testteacher_end", lang, count=result.get('reminders_sent', 0)))
 
 @dp.message(Command("myschedule"))
 async def cmd_myschedule(message: types.Message):
     user_id = message.from_user.id
     if user_id not in TEACHERS_MAP:
-        await message.answer("❌ Դուք գրանցված չեք որպես ուսուցիչ համակարգում:")
+        lang = await get_user_language(message.from_user.id)
+        await message.answer(t("not_a_teacher", lang))
         return
         
     teacher = TEACHERS_MAP[user_id]
@@ -1396,11 +1335,11 @@ async def cmd_myschedule(message: types.Message):
                 await message.answer("❌ CRM API Request failed")
                 return
         except Exception as e:
-            await message.answer(f"❌ Սխալ: {e}")
+            await message.answer(f"❌ Ошибка: {e}")
             return
             
     if not items:
-        await message.answer(f"📅 **{teacher['name']}**\n\nԱյսօր և վաղը դասեր չկան:", parse_mode="Markdown")
+        await message.answer(t("no_lessons_today_tomorrow", lang, name=teacher['name']), parse_mode="Markdown")
         return
         
     schedule_today = []
@@ -1417,8 +1356,8 @@ async def cmd_myschedule(message: types.Message):
         date_str = item.get("date")
         time_from = item.get("time_from", "")[-8:-3]
         time_to = item.get("time_to", "")[-8:-3]
-        room = ROOMS_MAP.get(item.get("room_id"), "Անհայտ").replace("*", "").replace("_", "").replace("[", "").replace("]", "")
-        subject = SUBJECTS_MAP.get(item.get("subject_id"), "Անհայտ").replace("*", "").replace("_", "").replace("[", "").replace("]", "")
+        room = ROOMS_MAP.get(item.get("room_id"), t("unknown", lang)).replace("*", "").replace("_", "").replace("[", "").replace("]", "")
+        subject = SUBJECTS_MAP.get(item.get("subject_id"), t("unknown", lang)).replace("*", "").replace("_", "").replace("[", "").replace("]", "")
         
         lesson_text = f"🕒 {time_from} - {time_to} | 🏫 {room} | 📚 {subject}"
         
@@ -1427,17 +1366,17 @@ async def cmd_myschedule(message: types.Message):
         elif date_str == date_to:
             schedule_tomorrow.append(lesson_text)
             
-    response_text = f"📅 <b>{teacher['name']} - Գրաֆիկ</b>\n\n"
+    response_text = f"📅 <b>{teacher['name']} - {t('schedule', lang)}</b>\n\n"
     
     if schedule_today:
-        response_text += "🔹 <b>Այսօր</b>\n" + "\n".join(schedule_today) + "\n\n"
+        response_text += f"🔹 <b>{t('today', lang)}</b>\n" + "\n".join(schedule_today) + "\n\n"
     else:
-        response_text += "🔹 <b>Այսօր:</b> Դասեր չկան\n\n"
+        response_text += f"🔹 <b>{t('today', lang)}:</b> {t('no_lessons', lang)}\n\n"
         
     if schedule_tomorrow:
-        response_text += "🔹 <b>Վաղը</b>\n" + "\n".join(schedule_tomorrow)
+        response_text += f"🔹 <b>{t('tomorrow', lang)}</b>\n" + "\n".join(schedule_tomorrow)
     else:
-        response_text += "🔹 <b>Վաղը:</b> Դասեր չկան"
+        response_text += f"🔹 <b>{t('tomorrow', lang)}:</b> {t('no_lessons', lang)}"
         
     await message.answer(response_text, parse_mode="HTML")
 
@@ -1457,7 +1396,7 @@ async def cmd_prob(message: types.Message):
     day_name, day_schedule = schedule[today_weekday]
 
     text = (
-        f"{loc['name']} (ՃԻՇՏ մասնաճյուղ)\n"
+        f"{loc['name']} ({t('correct_branch', lang)})\n"
         "——————————————————————————\n"
         f"🔹 {day_name}\n"
         f"{day_schedule}\n"
@@ -1476,7 +1415,7 @@ async def cmd_proball(message: types.Message):
         await message.answer(t("prob_no_schedule", lang, loc=loc["name"]))
         return
 
-    text = f"{loc['name']} (ՃԻՇՏ մասնաճյուղ)\n——————————————————————————\n"
+    text = f"{loc['name']} ({t('correct_branch', lang)})\n——————————————————————————\n"
     for i in range(6):  # Пн-Сб
         day_name, day_schedule = schedule[i]
         text += f"🔹 {day_name}\n{day_schedule}\n——————————————————————————\n"
@@ -1486,38 +1425,40 @@ async def cmd_proball(message: types.Message):
 
 @dp.message(Command("getweek"))
 async def cmd_getweek(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     
-    await message.answer("🔄 Կապ եմ հաստատում Alfa CRM-ի հետ...")
+    await message.answer(t("getweek_searching", lang))
     booked_slots = await fetch_probation_lessons()
     
     if booked_slots is None:
-        await message.answer("❌ Սխալ՝ չհաջողվեց կապ հաստատել Alfa CRM-ի հետ: Ստուգեք API բանալիները (ALFACRM_API_KEY) և համոզվեք, որ CRM-ում անջատված են IP սահմանափակումները:")
+        await message.answer(t("getweek_err_api", lang))
         return
         
     if not booked_slots:
-        await message.answer("Այս շաբաթվա համար գրանցված փորձնական դասեր չկան:")
+        await message.answer(t("getweek_empty", lang))
         return
         
-    DAYS = ["Երկուշաբթի", "Երեքշաբթի", "Չորեքշաբթի", "Հինգշաբթի", "Ուրբաթ", "Շաբաթ", "Կիրակի"]
+    DAYS = [t("mon", lang), t("tue", lang), t("wed", lang), t("thu", lang), t("fri", lang), t("sat", lang), t("sun", lang)]
     
     grouped = {}
     for slot in booked_slots:
         w = slot["weekday"]
-        t = slot["time"]
+        t_time = slot["time"]
         s = slot["subject"]
         p = slot["participants"]
         
         if w not in grouped: grouped[w] = {}
-        if t not in grouped[w]: grouped[w][t] = {}
-        if s not in grouped[w][t]: grouped[w][t][s] = 0
-        grouped[w][t][s] += p
+        if t_time not in grouped[w]: grouped[w][t_time] = {}
+        if s not in grouped[w][t_time]: grouped[w][t_time][s] = 0
+        grouped[w][t_time][s] += p
         
-    text = "🗓 **Գրանցված փորձնական դասեր (Այս շաբաթ)**\n\n"
+    text = t("getweek_header", lang)
     for w in sorted(grouped.keys()):
         text += f"🔹 {DAYS[w]}\n"
-        for t in sorted(grouped[w].keys()):
-            for s, p in grouped[w][t].items():
-                text += f"  • {t} — {s} ({p} աշակերտ)\n"
+        for t_time in sorted(grouped[w].keys()):
+            for s, p in grouped[w][t_time].items():
+                text += t("getweek_row", lang, time=t_time, subj=s, count=p)
         text += "—\n"
         
     await message.answer(text, parse_mode="Markdown")
@@ -1611,61 +1552,63 @@ async def fetch_probation_details():
                 cdata = resp.json().get("items", [])
                 for c in cdata:
                     cid = c.get("id")
-                    name = c.get("name", "Անհայտ")
+                    name = c.get("name")
                     phones = c.get("phone", [])
-                    phone = phones[0] if phones else "Չկա"
+                    phone = phones[0] if phones else None
                     customers_map[cid] = {"name": name, "phone": phone}
                 
     return {"lessons": target_lessons, "customers": customers_map}
 
 @dp.message(Command("getprob"))
 async def cmd_getprob(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     
-    await message.answer("🔄 Բեռնում եմ այս շաբաթվա գրանցվածները...")
+    await message.answer(t("getweek_searching", lang))
     
     data = await fetch_probation_details()
     if data is None:
-        await message.answer("❌ Սխալ՝ չհաջողվեց կապ հաստատել Alfa CRM-ի հետ:")
+        await message.answer(t("getweek_err_api", lang))
         return
         
     if not data or not data.get("lessons"):
-        await message.answer("Այս շաբաթվա համար գրանցված փորձնական դասեր չկան:")
+        await message.answer(t("getweek_empty", lang))
         return
         
-    DAYS = ["Երկուշաբթի", "Երեքշաբթի", "Չորեքշաբթի", "Հինգշաբթի", "Ուրբաթ", "Շաբաթ", "Կիրակի"]
+    DAYS = [t("mon", lang), t("tue", lang), t("wed", lang), t("thu", lang), t("fri", lang), t("sat", lang), t("sun", lang)]
     
     schedule = {}
     for lesson in data["lessons"]:
         w = lesson["weekday"]
-        t = lesson["time"]
+        t_time = lesson["time"]
         s = lesson["subject"]
         if w not in schedule: schedule[w] = {}
-        if t not in schedule[w]: schedule[w][t] = {}
-        if s not in schedule[w][t]: schedule[w][t][s] = []
-        schedule[w][t][s].extend(lesson["customers"])
+        if t_time not in schedule[w]: schedule[w][t_time] = {}
+        if s not in schedule[w][t_time]: schedule[w][t_time][s] = []
+        schedule[w][t_time][s].extend(lesson["customers"])
         
-    text = "🟢 <b>Այս շաբաթվա գրանցված փորձնական դասերը</b>\n\n"
+    text = t("getprob_header", lang)
     for w in sorted(schedule.keys()):
         text += f"📅 <b>{DAYS[w]}</b>\n"
-        for t in sorted(schedule[w].keys()):
-            for s, c_list in schedule[w][t].items():
-                text += f"🕒 {t} — {s}\n"
+        for t_time in sorted(schedule[w].keys()):
+            for s, c_list in schedule[w][t_time].items():
+                text += f"🕒 {t_time} — {s}\n"
                 for cid in c_list:
                     c = data["customers"].get(cid, {})
-                    name = c.get("name", "Անհայտ")
+                    name = c.get("name") or t("unknown", lang)
                     if name.startswith("G.N | "):
                         name = name[6:]
                     # Escape HTML for name
                     name = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                    phone = c.get("phone", "Չկա")
-                    if phone != "Չկա":
+                    phone = c.get("phone") or t("no_phone", lang)
+                    if phone != t("no_phone", lang):
                         phone_clean = "".join(filter(str.isdigit, phone))
                         if phone.startswith("+"): phone_clean = "+" + phone_clean
                         phone_link = f'<a href="tel:{phone_clean}">{phone}</a>'
                     else:
                         phone_link = phone
                         
-                    card_link = f'<a href="https://robixlab.s20.online/company/1/customer/view?id={cid}">Անկետա</a>'
+                    card_link = f'<a href="https://robixlab.s20.online/company/1/customer/view?id={cid}">{t("card_link", lang)}</a>'
                     text += f"  👤 {name} - {card_link} - {phone_link}\n"
                 text += "\n"
         text += "—\n"
@@ -1679,31 +1622,33 @@ async def cmd_getprob(message: types.Message):
         await message.answer(text, parse_mode="HTML", disable_web_page_preview=True)
 @dp.message(Command("freeprob"))
 async def cmd_freeprob(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     
-    await message.answer("🔄 Հաշվարկում եմ ազատ տեղերը...")
+    await message.answer(t("freeprob_searching", lang))
     booked_slots = await fetch_probation_lessons()
     
     if booked_slots is None:
-        await message.answer("❌ Սխալ՝ չհաջողվեց կապ հաստատել Alfa CRM-ի հետ: Ստուգեք API բանալիները (ALFACRM_API_KEY) և համոզվեք, որ CRM-ում անջատված են IP սահմանափակումները:")
+        await message.answer(t("getweek_err_api", lang))
         return
         
     booked = {}
     for slot in booked_slots:
         w = slot["weekday"]
-        t = slot["time"]
+        t_time = slot["time"]
         s = slot["subject"]
         p = slot["participants"]
-        key = f"{w}_{t}_{s}"
+        key = f"{w}_{t_time}_{s}"
         booked[key] = booked.get(key, 0) + p
         
-    DAYS = ["Երկուշաբթի", "Երեքշաբթի", "Չորեքշաբթի", "Հինգշաբթի", "Ուրբաթ", "Շաբաթ", "Կիրակի"]
+    DAYS = [t("mon", lang), t("tue", lang), t("wed", lang), t("thu", lang), t("fri", lang), t("sat", lang), t("sun", lang)]
     
     tz = zoneinfo.ZoneInfo("Asia/Yerevan")
     now = datetime.now(tz)
     current_w = now.weekday()
     current_time = now.time()
     
-    text = "🟢 **Ազատ տեղեր փորձնական դասերի համար (առաջիկա)**\n\n"
+    text = t("freeprob_header", lang)
     has_any_slots = False
     
     for w in range(6):
@@ -1741,7 +1686,7 @@ async def cmd_freeprob(message: types.Message):
                 available = cap - b
                 
             if available > 0:
-                day_text += f"  • {t} — {s} (Ազատ՝ {available})\n"
+                day_text += t("freeprob_row", lang, time=t_time, subj=s, avail=available)
                 has_slots = True
                 has_any_slots = True
                 
@@ -1749,7 +1694,7 @@ async def cmd_freeprob(message: types.Message):
             text += day_text + "—\n"
             
     if not has_any_slots:
-        text += "Այս շաբաթ այլևս ազատ տեղեր չկան:\n"
+        text += t("freeprob_empty", lang)
         
     if text.endswith("—\n"):
         text = text[:-2]
@@ -1758,22 +1703,23 @@ async def cmd_freeprob(message: types.Message):
 
 @dp.message(Command("addtask"))
 async def cmd_addtask(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     task_description = message.text.replace("/addtask", "", 1).strip()
     if not task_description:
-        await message.answer("Խնդրում ենք նշել առաջադրանքի նկարագրությունը: Օրինակ՝ /addtask Ջնջել խումբը")
+        await message.answer(t("task_desc_req", lang))
         return
         
     if not POSTGRES_URL:
-        await message.answer("Բազան միացված չէ (POSTGRES_URL is missing):")
+        await message.answer(t("no_db", lang))
         return
 
-    await ensure_db()
     loc = await get_user_location(message.from_user.id)
     await add_task(task_description, location=loc["code"])
-    await message.answer("Առաջադրանքը ավելացված է:")
+    await message.answer(t("task_added", lang, loc=loc["name"]))
 
     user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-    task_msg = f"📌 **Նոր առաջադրանք!**\n\n👤 Ավելացրեց՝ {user_info}\n🔹 {task_description}"
+    task_msg = t("task_added_push", lang, loc=loc["name"], user=user_info, desc=task_description)
 
     # Get all users who use the bot (from Postgres & memory) to send them private notification
     target_users = set(KNOWN_USERS).union(EXECUTORS.keys())
@@ -1795,18 +1741,19 @@ async def cmd_addtask(message: types.Message):
 
 @dp.message(Command("checktasks"))
 async def cmd_checktasks(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     if not POSTGRES_URL:
-        await message.answer("Բազան միացված չէ (POSTGRES_URL is missing):")
+        await message.answer(t("no_db", lang))
         return
 
-    await ensure_db()
     loc = await get_user_location(message.from_user.id)
     tasks = await get_tasks(location=loc["code"])
     if not tasks:
-        await message.answer("Առաջադրանքների ցանկը դատարկ է:")
+        await message.answer(t("task_empty", lang))
         return
         
-    response = f"📝 **{loc['name']} — Առաջադրանքների ցանկ:**\n\n"
+    response = t("task_header", lang, loc=loc['name'])
     builder = InlineKeyboardBuilder()
     
     for task in tasks:
@@ -1821,6 +1768,7 @@ async def cmd_checktasks(message: types.Message):
 @dp.callback_query(F.data.startswith("complete_"))
 async def callback_complete_task(callback: types.CallbackQuery):
     await ensure_db()
+    lang = await get_user_language(callback.from_user.id)
     
     # Support both "complete_GN_5" (new) and "complete_5" (legacy)
     raw_parts = callback.data.split("_")
@@ -1833,12 +1781,12 @@ async def callback_complete_task(callback: types.CallbackQuery):
         
     task_desc = await delete_task(task_id)
     if not task_desc:
-        await callback.answer("Այս առաջադրանքը արդեն կատարված է կամ ջնջված։", show_alert=True)
+        await callback.answer(t("task_not_found_cb", lang), show_alert=True)
     else:
-        await callback.answer(f"✅ Task{task_id} կատարված է։")
+        await callback.answer(t("task_done_cb", lang, n=task_id))
         user_info = f"@{callback.from_user.username}" if callback.from_user.username else callback.from_user.full_name
         
-        notify_text = f"✅ **Առաջադրանքը կատարվել է!**\n\n👤 Կատարեց՝ {user_info}\n🔹 **Task{task_id}** — {task_desc}"
+        notify_text = t("task_done_push", lang, user=user_info, n=task_id, desc=task_desc)
         
         # Send completion notifications ONLY to Lusine (6062763343), Hripsime (5636022981), and Aram (1472817960)
         for u_id in TASK_NOTIFY_USERS:
@@ -1849,11 +1797,11 @@ async def callback_complete_task(callback: types.CallbackQuery):
                 
     tasks = await get_tasks(location=cb_location)
     if not tasks:
-        await callback.message.edit_text("🎉 Բոլոր առաջադրանքները կատարված են։", parse_mode="Markdown")
+        await callback.message.edit_text(t("task_all_done", lang), parse_mode="Markdown")
         return
         
     loc_name = (get_location(cb_location) or {}).get("name", cb_location)
-    response = f"📝 **{loc_name} — Առաջադրանքների ցանկ:**\n\n"
+    response = t("task_header", lang, loc=loc_name)
     builder = InlineKeyboardBuilder()
     
     for task in tasks:
@@ -1867,21 +1815,22 @@ async def callback_complete_task(callback: types.CallbackQuery):
 
 @dp.message(F.text.regexp(r'(?i)^/task(\d+)$'))
 async def cmd_complete_task_number(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     match = re.match(r'(?i)^/task(\d+)$', message.text)
     if not match:
         return
     task_id = int(match.group(1))
     
-    await ensure_db()
     task_desc = await delete_task(task_id)
     if not task_desc:
-        await message.answer(f"❌ Task{task_id} չի գտնվել կամ արդեն կատարված է:")
+        await message.answer(t("task_not_found_cmd", lang, n=task_id))
         return
         
-    await message.answer(f"✅ Task{task_id} — «{task_desc}» կատարված է:")
+    await message.answer(t("task_done_cmd", lang, n=task_id, desc=task_desc))
     
     user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-    notify_text = f"✅ **Առաջադրանքը կատարվել է!**\n\n👤 Կատարեց՝ {user_info}\n🔹 **Task{task_id}** — {task_desc}"
+    notify_text = t("task_done_push", lang, user=user_info, n=task_id, desc=task_desc)
     
     # Send completion notifications ONLY to Lusine (6062763343), Hripsime (5636022981), and Aram (1472817960)
     for u_id in TASK_NOTIFY_USERS:
@@ -1892,7 +1841,9 @@ async def cmd_complete_task_number(message: types.Message):
 
 @dp.message(Command("task"))
 async def cmd_task_hint(message: types.Message):
-    await message.answer("Խնդրում ենք նշել առաջադրանքի համարը, օրինակ՝ /task1")
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
+    await message.answer(t("task_hint", lang))
 
 @dp.message(Command("add"))
 async def cmd_add_student_to_group(message: types.Message):
@@ -1902,21 +1853,15 @@ async def cmd_add_student_to_group(message: types.Message):
     
     raw_args = message.text.replace("/add", "", 1).strip()
     
+    lang = await get_user_language(message.from_user.id)
     if not raw_args:
         await message.answer(
-            f"👥 **Ավելացնել աշակերտին խմբում (Alfa CRM - {loc['name']}):**\n\n"
-            f"⚠️ **Ուշադրություն!** Խումբը և աշակերտը պետք է CRM-ում ունենան **{loc['crm_prefix']}** պրեֆիքս:\n\n"
-            "Խնդրում ենք գրել հետևյալ ձևաչափով՝\n"
-            "👉 `/add Saakyan Gexam Lego 1`\n\n"
-            "**Օրինակներ՝**\n"
-            "• `/add Saakyan Gexam Lego 1`\n"
-            "• `/add Lego 1, Saakyan Gexam`\n"
-            "• `/add 3402, Lego 1`",
+            t("add_help", lang, loc=loc['name'], prefix=loc['crm_prefix']),
             parse_mode="Markdown"
         )
         return
 
-    status_msg = await message.answer(f"🔄 Փնտրում եմ խումբը և աշակերտին Alfa CRM-ում ({loc['name']})...")
+    status_msg = await message.answer(t("add_search", lang, loc=loc['name']))
     
     # 1. Fetch all groups in 1 single HTTP request
     all_groups = await get_all_alfacrm_groups()
@@ -1979,16 +1924,11 @@ async def cmd_add_student_to_group(message: types.Message):
                     student_query = " ".join(words[1:])
 
     if not group:
-        await status_msg.edit_text(
-            f"❌ «{raw_args}» հարցման մեջ խումբը չգտնվեց Գարեգին Նժդեհ տեղադրությունում:\n"
-            "Ստուգեք խմբի անվանման ճշտությունը:"
-        )
+        await status_msg.edit_text(t("add_err_group", lang, query=raw_args, loc=loc['name']))
         return
 
     if not student_query:
-        await status_msg.edit_text(
-            f"❌ «{raw_args}» հարցման մեջ աշակերտի անունը/ID-ն նշված չէ:"
-        )
+        await status_msg.edit_text(t("add_err_no_student", lang, query=raw_args))
         return
 
     # Fetch customer ONCE (by ID or name)
@@ -1999,22 +1939,18 @@ async def cmd_add_student_to_group(message: types.Message):
         customer = await get_alfacrm_customer_by_name(student_query, crm_prefix=loc["crm_prefix"])
 
     if not customer:
-        await status_msg.edit_text(
-            f"❌ «{student_query}» աշակերտը/լիդը չգտնվեց Alfa CRM-ում:\n"
-            "Ստուգեք անվանման ճշտությունը կամ ուղարկեք ID-ն:"
-        )
+        await status_msg.edit_text(t("add_err_student", lang, query=student_query))
         return
 
     group_name = group.get("name", "")
     group_id = group.get("id")
-    customer_name = customer.get("name") or customer.get("legal_name", "Աշակերտ")
+    customer_name = customer.get("name") or customer.get("legal_name", t("unknown", lang))
     customer_id = customer.get("id")
 
     # Check location prefix for group
     if not (group_name.upper().startswith(f"{loc['crm_prefix']} |") or group_name.upper().startswith(f"{loc['crm_prefix']}|")):
         await status_msg.edit_text(
-            f"⚠️ **«{group_name}» խումբը չունի «{loc['crm_prefix']}» պրեֆիքս!**\n\n"
-            f"Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում խմբի անվանման սկզբում ավելացնել «{loc['crm_prefix']}» (օրինակ՝ `{loc['crm_prefix']} | {group_name}`) և կրկնել հրամանը:",
+            t("add_err_g_prefix", lang, group=group_name, prefix=loc['crm_prefix']),
             parse_mode="Markdown"
         )
         return
@@ -2022,8 +1958,7 @@ async def cmd_add_student_to_group(message: types.Message):
     # Check location prefix for student
     if not (customer_name.upper().startswith(f"{loc['crm_prefix']} |") or customer_name.upper().startswith(f"{loc['crm_prefix']}|")):
         await status_msg.edit_text(
-            f"⚠️ **«{customer_name}» աշակերտը չունի «{loc['crm_prefix']}» պրեֆիքս!**\n\n"
-            f"Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում աշակերտի անվանման սկզբում ավելացնել «{loc['crm_prefix']}» (օրինակ՝ `{loc['crm_prefix']} | {customer_name}`) և կրկնել հրամանը:",
+            t("add_err_s_prefix", lang, student=customer_name, prefix=loc['crm_prefix']),
             parse_mode="Markdown"
         )
         return
@@ -2033,19 +1968,15 @@ async def cmd_add_student_to_group(message: types.Message):
     
     if success:
         if msg == "already_in_group":
-            await status_msg.edit_text(
-                f"ℹ️ «{customer_name}» աշակերտը արդեն իսկ գտնվում է «{group_name}» խմբում:"
-            )
+            await status_msg.edit_text(t("add_already", lang, student=customer_name, group=group_name))
         else:
             await status_msg.edit_text(
-                f"✅ **Հաջողությամբ ավելացվեց!**\n\n"
-                f"👤 Աշակերտ՝ **{customer_name}**\n"
-                f"👥 Խումբ՝ **{group_name}**",
+                t("add_success", lang, student=customer_name, group=group_name),
                 parse_mode="Markdown"
             )
     else:
         await status_msg.edit_text(
-            f"❌ Սխալ տեղի ունեցավ «{customer_name}» աշակերտին «{group_name}» խմբում ավելացնելիս:\n`{msg}`",
+            t("add_fail", lang, student=customer_name, group=group_name, err=msg),
             parse_mode="Markdown"
         )
 
@@ -2053,59 +1984,61 @@ async def cmd_add_student_to_group(message: types.Message):
 async def cmd_ban(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     parts = message.text.split()
     if len(parts) < 2 or not parts[1].isdigit():
-        await message.answer("Նշեք օգտատիրոջ ID-ն: Օրինակ՝ /ban 123456789")
+        await message.answer(t("ban_format", lang))
         return
         
     target_id = int(parts[1])
     if target_id == ADMIN_ID:
-        await message.answer("Դուք չեք կարող բլոկավորել ինքներդ ձեզ:")
+        await message.answer(t("ban_self", lang))
         return
         
-    await ensure_db()
     conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     await conn.execute("INSERT INTO banned_users (user_id) VALUES ($1) ON CONFLICT DO NOTHING", target_id)
     await conn.close()
     
     BANNED_USERS.add(target_id)
-    await message.answer(f"✅ Օգտատեր {target_id}-ը բլոկավորված է և չի կարող օգտվել բոտից:")
+    await message.answer(t("ban_success", lang, uid=target_id))
 
 @dp.message(Command("unban"))
 async def cmd_unban(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     parts = message.text.split()
     if len(parts) < 2 or not parts[1].isdigit():
-        await message.answer("Նշեք օգտատիրոջ ID-ն: Օրինակ՝ /unban 123456789")
+        await message.answer(t("unban_format", lang))
         return
         
     target_id = int(parts[1])
     
-    await ensure_db()
     conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     await conn.execute("DELETE FROM banned_users WHERE user_id = $1", target_id)
     await conn.close()
     
     if target_id in BANNED_USERS:
         BANNED_USERS.remove(target_id)
-    await message.answer(f"✅ Օգտատեր {target_id}-ի բլոկավորումը հանված է:")
+    await message.answer(t("unban_success", lang, uid=target_id))
 
 @dp.message(Command("testsheet"))
 async def cmd_testsheet(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
-    await message.answer("🔄 Փորձում եմ կապվել Google Sheets-ի հետ...")
+    await message.answer("🔄 Пробую подключиться к Google Sheets...")
     from api.sheets import append_payment_to_sheet
     import traceback
     try:
         success, msg = await append_payment_to_sheet("18.09.2026", "Test Testyan", 5000, "n")
         if success:
-            await message.answer("✅ Google Sheets տվյալների ավելացումը հաջողվեց!")
+            await message.answer("✅ Данные успешно добавлены в Google Sheets!")
         else:
-            await message.answer(f"❌ Սխալ Google Sheets-ում:\n`{msg}`", parse_mode="Markdown")
+            await message.answer(f"❌ Ошибка в Google Sheets:\n`{msg}`", parse_mode="Markdown")
     except Exception as e:
-        await message.answer(f"❌ Տեխնիկական սխալ:\n`{traceback.format_exc()}`", parse_mode="Markdown")
+        await message.answer(f"❌ Техническая ошибка:\n`{traceback.format_exc()}`", parse_mode="Markdown")
 
 @dp.message(Command("sendupdate"))
 async def cmd_sendupdate(message: types.Message):
@@ -2113,18 +2046,19 @@ async def cmd_sendupdate(message: types.Message):
         return
         
     await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     
     text = (
-        "🚀 **Նոր թարմացում բոտում! (V2.5)**\n\n"
-        "Բարև բոլորին: Բոտում ավելացել են նոր հնարավորություններ և կատարվել են կարևոր օպտիմիզացիաներ.\n\n"
-        "🆕 **Նոր հրամաններ՝ /addprob և /addprobk**\n"
-        "Այժմ կարող եք աշակերտներին միանգամից գրանցել փորձնական դասերի (խմբային կամ անհատական) անմիջապես բոտից:\n"
-        "👉 `/addprob <հեռախոս> <mk/lg> <օր.ամիս> <ժամ>` — Խմբային փորձնական (Գ. Նժդեհ)\n"
-        "👉 `/addprobk <հեռախոս> <mk/lg> <օր.ամիս> <ժամ>` — Անհատական փորձնական (Կոմիտաս)\n\n"
-        "⚡ **Օպտիմիզացիա և Արագագործության բարելավում**\n"
-        "Բոտի աշխատանքը էապես արագացել է և բարելավվել է սխալների մշակումը: Հարցումները կատարվում են շատ ավելի արագ ու հստակ, իսկ սխալների դեպքում բոտը հաղորդում է հստակ պատճառը:\n\n"
-        "🛠 **Այլ փոփոխություններ**\n"
-        "Թարմացվել են /about և /help հրահանգները՝ նոր ֆունկցիաներին ծանոթանալու համար:"
+        "🚀 **Новое обновление бота! (V2.5)**\n\n"
+        "Всем привет! В бот добавлены новые возможности и проведены важные оптимизации.\n\n"
+        "🆕 **Новые команды: /addprob и /addprobk**\n"
+        "Теперь вы можете записывать учеников на пробные уроки (групповые или индивидуальные) прямо из бота:\n"
+        "👉 `/addprob <телефон> <mk/lg> <день.месяц> <время>` — Групповой пробный (Г. Нжде)\n"
+        "👉 `/addprobk <телефон> <mk/lg> <день.месяц> <время>` — Индивидуальный пробный (Комитас)\n\n"
+        "⚡ **Оптимизация и улучшение производительности**\n"
+        "Работа бота значительно ускорена, улучшена обработка ошибок. Запросы выполняются быстрее, а в случае ошибок бот сообщает четкую причину.\n\n"
+        "🛠 **Другие изменения**\n"
+        "Обновлены команды /about и /help для ознакомления с новыми функциями."
     )
     
     target_users = set(KNOWN_USERS).union(EXECUTORS.keys())
@@ -2146,7 +2080,7 @@ async def cmd_sendupdate(message: types.Message):
         except Exception:
             pass
             
-    await message.answer(f"✅ Հաղորդագրությունը հաջողությամբ ուղարկվել է {success_count} օգտատերերի:")
+    await message.answer(t("update_success", lang, count=success_count))
 
 @dp.message(Command("getusers"))
 async def cmd_getusers(message: types.Message):
@@ -2154,15 +2088,16 @@ async def cmd_getusers(message: types.Message):
         return
         
     await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     rows = await conn.fetch("SELECT user_id, username, full_name FROM all_users ORDER BY full_name")
     await conn.close()
     
     if not rows:
-        await message.answer("Ակտիվ օգտատերեր չկան (ոչ ոք դեռ չի գրել բոտին):")
+        await message.answer(t("no_users", lang))
         return
         
-    response = "Բոլոր օգտատերերը (Անուն - ID)՝\n\n"
+    response = t("users_header", lang)
     for row in rows:
         user_display = row['full_name']
         if row['username']:
@@ -2170,7 +2105,7 @@ async def cmd_getusers(message: types.Message):
         response += f"{user_display} - {row['user_id']}\n"
         
     if len(response) > 4000:
-        response = response[:4000] + "...\n[Ցանկը շատ երկար է]"
+        response = response[:4000] + t("list_too_long", lang)
         
     await message.answer(response)
 
@@ -2182,7 +2117,8 @@ async def process_html_upload(message: types.Message):
     if not message.document.file_name.endswith('.html'):
         return
         
-    await message.answer("Բեռնում և մշակում եմ Lego-ի HTML ֆայլը...")
+    lang = await get_user_language(message.from_user.id)
+    await message.answer(t("html_upload_start", lang))
     file = await bot.get_file(message.document.file_id)
     file_bytes = BytesIO()
     await bot.download_file(file.file_path, file_bytes)
@@ -2226,24 +2162,25 @@ async def process_html_upload(message: types.Message):
         themes_added = len(themes_to_insert)
             
     await conn.close()
-    await message.answer(f"Lego-ի բազան հաջողությամբ թարմացվել է:\nՄշակված խմբեր՝ {groups_added}\nԱվելացված թեմաներ՝ {themes_added}")
+    await message.answer(t("html_upload_success", lang, g=groups_added, t=themes_added))
 
 @dp.message(Command("lego"))
 async def cmd_lego(message: types.Message):
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
     
     group_query = message.text.replace("/lego", "", 1).strip()
     if not group_query:
-        await message.answer("Նշեք խմբի անունը, օրինակ՝ /lego Spider man")
+        await message.answer(t("lego_format", lang))
         return
         
-    await ensure_db()
     conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     
     # Ищем группу 
     groups = await conn.fetch("SELECT id, name FROM lego_groups WHERE name ILIKE $1 LIMIT 1", f"%{group_query}%")
     if not groups:
         await conn.close()
-        await message.answer(f"«{group_query}» խումբը չի գտնվել բազայում:")
+        await message.answer(t("lego_not_found", lang, group=group_query))
         return
         
     group_id = groups[0]['id']
@@ -2253,22 +2190,22 @@ async def cmd_lego(message: types.Message):
     await conn.close()
     
     if not themes:
-        await message.answer(f"«{group_name}» խմբում հասանելի թեմաներ չկան (կամ բոլորն արդեն անցել են):")
+        await message.answer(t("lego_no_themes", lang, group=group_name))
         return
         
     themes_list = "\n".join([f"- {t['name']}" for t in themes])
-    prompt = f"Հասանելի թեմաներ «{group_name}» խմբի համար:\n{themes_list}\n\nԳրեք այն թեմայի անվանումը, որն ընտրել եք:"
+    prompt = t("lego_themes_list", lang, group=group_name, list=themes_list)
     
     # Лимит Telegram - 4096 символов.
     if len(prompt) > 4000:
-        prompt = prompt[:4000] + "...\n\nԳրեք այն թեմայի անվանումը, որն ընտրել եք:"
+        prompt = prompt[:4000] + t("lego_theme_prompt", lang)
         
     await message.answer(prompt, reply_markup=ForceReply(selective=True))
 
 def is_theme_reply(message: types.Message) -> bool:
     if not message.reply_to_message or not message.reply_to_message.text:
         return False
-    return "Հասանելի թեմաներ «" in message.reply_to_message.text
+    return "Հասանելի թեմաներ «" in message.reply_to_message.text or "Доступные темы для группы «" in message.reply_to_message.text
 
 @dp.message(is_theme_reply)
 async def process_theme_selection(message: types.Message):
@@ -2287,10 +2224,14 @@ async def process_theme_selection(message: types.Message):
     await ensure_db()
     conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
     
+    await ensure_db()
+    lang = await get_user_language(message.from_user.id)
+    conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
+    
     group_id = await conn.fetchval("SELECT id FROM lego_groups WHERE name = $1", group_name)
     if not group_id:
         await conn.close()
-        await message.answer("Սխալ․ խումբը բազայում չի գտնվել։")
+        await message.answer(t("lego_err_group", lang))
         return
         
     deleted_id = await conn.fetchval(
@@ -2301,9 +2242,9 @@ async def process_theme_selection(message: types.Message):
     await conn.close()
     
     if deleted_id:
-        await message.answer(f"✅ «{theme_choice}» թեման ընտրված և հեռացված է «{group_name}» խմբից:")
+        await message.answer(t("lego_theme_selected", lang, theme=theme_choice, group=group_name))
     else:
-        await message.answer(f"❌ «{theme_choice}» թեման չի գտնվել «{group_name}» խմբում։ Համոզվեք, որ այն ճիշտ եք գրել։")
+        await message.answer(t("lego_theme_invalid", lang, theme=theme_choice, group=group_name))
 
 def extract_customer_id(text: str) -> int | None:
     text = text.strip()
@@ -2347,7 +2288,9 @@ async def process_payment(message: types.Message):
 
     # Проверка, зарегистрировал ли пользователь свое имя
     if message.from_user.id not in EXECUTORS:
-        await message.answer("Խնդրում ենք նախ գրանցել ձեր անունը՝ սեղմելով /start հրամանը:")
+        await ensure_db()
+        lang = await get_user_language(message.from_user.id)
+        await message.answer(t("unreg_user", lang))
         return
         
     executor_name = EXECUTORS[message.from_user.id]
@@ -2356,17 +2299,7 @@ async def process_payment(message: types.Message):
     loc  = await get_user_location(message.from_user.id)
     lang = await get_user_language(message.from_user.id)
 
-    ERROR_INSTRUCTION = (
-        "❌ **Սխալ ձևաչափ**\n\n"
-        "Վճարումը գրանցելու համար խնդրում ենք գրել ճիշտ հերթականությամբ՝\n"
-        "👉 `Անուն Ազգանուն Գումար Եղանակ`\n\n"
-        "Օրինակ՝ `Aram Grigoryan 50000 N`\n\n"
-        "💳 **Հասանելի վճարման եղանակներ՝**\n"
-        "• `n` — Կանխիկ (Наличные)\n"
-        "• `b.n` — Տերմինալով (Безналичные)\n"
-        "• `c` — Քարտով փոխանցում (Карта)\n\n"
-        "⚠️ Ուշադրություն դարձրեք, որ գումարը պետք է լինի միայն թվերով, իսկ եղանակը՝ նշված տարբերակներից մեկը։"
-    )
+    ERROR_INSTRUCTION = t("payment_format_err", lang)
 
     parts = text.split()
     is_valid_payment_cmd = False
@@ -2384,22 +2317,22 @@ async def process_payment(message: types.Message):
             if customer_id is not None:
                 pending = PENDING_PAYMENTS.pop(message.from_user.id)
                 
-                processing_msg = await message.answer("🔄 Կապվում եմ Alfa CRM-ի հետ...")
+                processing_msg = await message.answer(t("payment_processing", lang))
                 customer = await get_alfacrm_customer_by_id(customer_id)
                 if not customer:
-                    await processing_msg.edit_text("❌ Աշակերտը չգտնվեց նշված CRM ID-ով/հղումով:")
+                    await processing_msg.edit_text(t("payment_not_found", lang))
                     PENDING_PAYMENTS[message.from_user.id] = pending
                     return
                     
-                payer_name = customer.get("legal_name") or customer.get("name", "Անհայտ")
+                payer_name = customer.get("legal_name") or customer.get("name", t("unknown", lang))
                 success = await create_alfacrm_payment(customer_id, pending['amount'], pending['method_raw'], payer_name, location_config=loc)
                 
                 if success:
                     tz = zoneinfo.ZoneInfo("Asia/Yerevan")
                     date_str = datetime.now(tz).strftime("%d.%m.%Y")
-                    student_name = customer.get("name", "Անհայտ")
+                    student_name = customer.get("name", t("unknown", lang))
                     await append_payment_to_sheet(date_str, student_name, pending['amount'], pending['method_raw'])
-                    await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում և ԴԴՍ-ում ({student_name}):\n\n{pending['response_text']}")
+                    await processing_msg.edit_text(t("payment_success", lang, name=student_name, text=pending['response_text']))
                     if GROUP_CHAT_ID:
                         try:
                             chat_id_int = int(GROUP_CHAT_ID)
@@ -2410,23 +2343,14 @@ async def process_payment(message: types.Message):
                         except Exception as e:
                             print(f"Failed to send to group: {e}")
                 else:
-                    await processing_msg.edit_text("❌ Սխալ տեղի ունեցավ CRM-ում վճարումը գրանցելիս:")
+                    await processing_msg.edit_text(t("payment_error", lang))
                 return
             else:
-                await message.answer(
-                    "❌ Չհաջողվեց գտնել աշակերտի ID-ն:\n"
-                    "Խնդրում ենք ուղարկել ճիշտ CRM անկետայի հղումը (օրինակ՝ `https://.../customer/view?id=12345`) կամ աշակերտի ID-ն:",
-                    parse_mode="Markdown"
-                )
+                await message.answer(t("payment_pending", lang), parse_mode="Markdown")
                 return
         else:
             if is_url_or_link(text):
-                await message.answer(
-                    "❌ Դուք չունեք սպասվող վճարում:\n\n"
-                    "Վճարումը գրանցելու համար խնդրում ենք գրել ճիշտ հերթականությամբ՝\n"
-                    "👉 `Անուն Ազգանուն Գումար Եղանակ`",
-                    parse_mode="Markdown"
-                )
+                await message.answer(t("payment_no_pending", lang), parse_mode="Markdown")
                 return
             else:
                 await message.answer(ERROR_INSTRUCTION, parse_mode="Markdown")
@@ -2439,12 +2363,12 @@ async def process_payment(message: types.Message):
     
     response_text = f"Платеж обработал(а): {executor_name}\n{loc['crm_prefix']} | {name_russian} | {payment_sum} | {payment_method}"
     
-    processing_msg = await message.answer("🔄 Փնտրում եմ աշակերտին CRM-ում...")
+    processing_msg = await message.answer(t("payment_searching", lang))
     
     customer = await get_alfacrm_customer_by_name(name_russian, crm_prefix=loc["crm_prefix"])
     
     if not customer:
-        await processing_msg.edit_text("❌ Աշակերտը չգտնվեց Alfa CRM-ում: Վճարումը հաստատելու համար խնդրում ենք ուղարկել նրա CRM անկետայի հղումը:")
+        await processing_msg.edit_text(t("payment_not_found", lang))
         PENDING_PAYMENTS[message.from_user.id] = {
             'amount': amount_int,
             'method_raw': payment_method_raw,
@@ -2463,7 +2387,7 @@ async def process_payment(message: types.Message):
         is_valid_loc = await check_customer_rooms(customer_id, valid_rooms=valid_rooms)
         
     if not is_valid_loc:
-        await processing_msg.edit_text(f"❌ Գտնվել է «{customer_name}» աշակերտը, բայց նա {loc['name']} մասնաճյուղից չէ: Վճարումը հաստատելու համար ուղարկեք նրա CRM անկետայի հղումը:")
+        await processing_msg.edit_text(t("payment_wrong_loc", lang, name=customer_name, loc=loc['name']))
         PENDING_PAYMENTS[message.from_user.id] = {
             'amount': amount_int,
             'method_raw': payment_method_raw,
@@ -2478,7 +2402,7 @@ async def process_payment(message: types.Message):
         tz = zoneinfo.ZoneInfo("Asia/Yerevan")
         date_str = datetime.now(tz).strftime("%d.%m.%Y")
         await append_payment_to_sheet(date_str, customer_name, amount_int, payment_method_raw)
-        await processing_msg.edit_text(f"✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում և ԴԴՍ-ում ({customer_name}):\n\n{response_text}")
+        await processing_msg.edit_text(t("payment_success", lang, name=customer_name, text=response_text))
         if GROUP_CHAT_ID:
             try:
                 chat_id_int = int(GROUP_CHAT_ID)
@@ -2489,7 +2413,7 @@ async def process_payment(message: types.Message):
             except Exception as e:
                 print(f"Failed to send to group: {e}")
     else:
-        await processing_msg.edit_text(f"❌ Սխալ տեղի ունեցավ CRM-ում վճարումը գրանցելիս: Ստուգեք Alfa CRM-ը:")
+        await processing_msg.edit_text(t("payment_error", lang))
 @app.post("/api/webhook")
 async def webhook(request: Request):
     print("Webhook endpoint triggered")
@@ -2575,9 +2499,9 @@ async def cron_tasks():
             chat_id_int = int(GROUP_CHAT_ID)
             thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
             
-            response = "⚠️ **Ուշադրություն! Անավարտ առաջադրանքներ**\n\n"
+            response = t("cron_tasks_header", "ru")
             for task in tasks:
-                response += f"🔹 **Task{task['id']}** - {task['description']}\n"
+                response += t("cron_task_item", "ru", id=task['id'], desc=task['description'])
                 
             await bot.send_message(
                 chat_id_int, 

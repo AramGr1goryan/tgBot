@@ -5,84 +5,212 @@
 STRINGS: dict = {
     "hy": {
         # ── Локация (/branch) ──────────────────────────────────────────
-        "location_set":       "✅ Lokacija'-n patasxvec e: **{name}**",
-        "location_invalid":   "❌ Ancejayt lokacija': `{code}`\nOgtagortsuyk'e': `gn`, `k`, `s`",
-        "location_current":   "📍 Aktiv lokacija': **{name}**\n\nAnhunacek':",
-        "location_choose":    "Anhunacek' lokacija'-n:",
+        "location_set":       "✅ Լոկացիան փոխված է՝ **{name}**",
+        "location_invalid":   "❌ Անհայտ լոկացիա՝ `{code}`\nՕգտագործեք՝ `gn`, `k`, `s`",
+        "location_current":   "📍 Ակտիվ լոկացիա՝ **{name}**\n\nԸնտրեք:",
+        "location_choose":    "Ընտրեք լոկացիան:",
 
         # ── Язык (/language) ──────────────────────────────────────────
-        "language_set":       "✅ Lezun patasxvec e",
-        "language_choose":    "Anhunacek' lezun:",
+        "language_set":       "✅ Լեզուն փոխված է",
+        "language_choose":    "Ընտրեք լեզուն:",
 
         # ── Платёж (process_payment) ──────────────────────────────────
-        "payment_searching":  "🔄 Patrvasum em Alfa CRM-um...",
-        "payment_not_found":  "❌ {phone} hamarov lid kam hachagor char gtanvec:",
+        "payment_searching":  "🔄 Փնտրում եմ աշակերտին CRM-ում...",
+        "payment_not_found":  "❌ Աշակերտը չգտնվեց Alfa CRM-ում: Վճարումը հաստատելու համար խնդրում ենք ուղարկել նրա CRM անկետայի հղումը:",
         "payment_wrong_loc":  (
-            "❌ Gtanvec e «{name}», bayc na «{loc}» lokaciajic' che:\n"
-            "Vcharumu'n hascecnelu hamar uuarcek' CRM qartahasy:"
+            "❌ Գտնվել է «{name}» աշակերտը, բայց նա {loc} մասնաճյուղից չէ: Վճարումը հաստատելու համար ուղարկեք նրա CRM անկետայի հղումը:"
         ),
-        "payment_success":    "✅ Vcharumu'n hajoxutyamb grancvec Alfa CRM-um ev DDS-um ({name}):\n\n{text}",
-        "payment_error":      "❌ Sxal CRM-um vcharum grancvelu:",
+        "payment_success":    "✅ Վճարումը հաջողությամբ գրանցվեց Alfa CRM-ում և ԴԴՍ-ում ({name}):\n\n{text}",
+        "payment_error":      "❌ Սխալ տեղի ունեցավ CRM-ում վճարումը գրանցելիս: Ստուգեք Alfa CRM-ը:",
         "payment_pending":    (
-            "❌ Ashakerty char gtanvec Alfa CRM-um:\n"
-            "Vcharumu'n hascecnelu hamar uuarcek' CRM qartahasy:"
+            "❌ Չհաջողվեց գտնել աշակերտի ID-ն:\n"
+            "Խնդրում ենք ուղարկել ճիշտ CRM անկետայի հղումը (օրինակ՝ `https://.../customer/view?id=12345`) կամ աշակերտի ID-ն:"
         ),
+        "payment_no_pending": "❌ Դուք չունեք սպասվող վճարում:",
+        "payment_format_err": (
+            "❌ **Սխալ ձևաչափ**\n\n"
+            "Վճարումը գրանցելու համար խնդրում ենք գրել ճիշտ հերթականությամբ՝\n"
+            "👉 `Անուն Ազգանուն Գումար Եղանակ`\n\n"
+            "Օրինակ՝ `Aram Grigoryan 50000 N`\n\n"
+            "💳 **Հասանելի վճարման եղանակներ՝**\n"
+            "• `n` — Կանխիկ (Наличные)\n"
+            "• `b.n` — Տերմինալով (Безналичные)\n"
+            "• `c` — Քարտով փոխանցում (Карта)\n\n"
+            "⚠️ Ուշադրություն դարձրեք, որ գումարը պետք է լինի միայն թվերով, իսկ եղանակը՝ նշված տարբերակներից մեկը։"
+        ),
+        "payment_processing": "🔄 Կապվում եմ Alfa CRM-ի հետ...",
+        "unreg_user":         "Խնդրում ենք նախ գրանցել ձեր անունը՝ սեղմելով /start հրամանը:",
 
         # ── /addprob ──────────────────────────────────────────────────
-        "addprob_searching":  "🔄 Patrvasum em...",
-        "addprob_not_found":  "❌ {phone} hamarov lid kam hachagor char gtanvec:",
-        "addprob_no_lesson":  "❌ Pordznayin das «{lesson}» nshvac zhamanakn char gtanvec ({dt}):",
+        "addprob_searching":  "🔄 Փնտրում եմ...",
+        "addprob_not_found":  "❌ Լիդ կամ հաճախորդ {phone} համարով չգտնվեց:",
+        "addprob_no_lesson":  "❌ Փորձնական դաս «{lesson}» նշված ժամին չգտնվեց ({dt}):",
         "addprob_added": (
-            "✅ **Hajoxutyamb avelajvec!**\n\n"
-            "👤 **Ashakert:** {student}\n"
-            "📚 **Das:** Pordznayin {lesson}\n"
-            "📅 **Zhamanak:** {dt}\n"
-            "📍 **Lokacija:** {loc}"
+            "✅ **Հաջողությամբ գրանցվեց!**\n\n"
+            "👤 **Աշակերտ:** {student}\n"
+            "📚 **Դաս:** Փորձնական {lesson}\n"
+            "📅 **Ժամանակ:** {dt}\n"
+            "📍 **Մասնաճյուղ:** {loc}"
         ),
-        "addprob_already":    "⚠️ Ashakerty ({name}) ardem grancvac e ays dasin:",
-        "addprob_error":      "❌ Sxal dasin avelajnelu: {msg}",
+        "addprob_already":    "⚠️ Աշակերտը ({name}) արդեն գրանցված է այս դասին:",
+        "addprob_error":      "❌ Սխալ դասին ավելացնելիս: {msg}",
+        "addprob_format": (
+            "❌ **Սխալ ձևաչափ**\n\n"
+            "Օգտագործեք՝ `/addprob <հեռախոս> <տեսակ> <ամսաթիվ> <ժամ>`\n"
+            "Օրինակ՝ `/addprob 077000700 mk 21.09 15`\n\n"
+            "Տեսակներ՝ `mk` (MakeBlock) կամ `lg` (LEGO Education)"
+        ),
+        "addprobk_format": (
+            "❌ **Սխալ ձևաչափ**\n\n"
+            "Օգտագործեք՝ `/addprobk <հեռախոս> <տեսակ> <ամսաթիվ> <ժամ>`\n"
+            "Օրինակ՝ `/addprobk 077000700 mk 21.09 15`\n\n"
+            "Տեսակներ՝ `mk` (MakeBlock) կամ `lg` (LEGO Education)"
+        ),
+        "invalid_type":       "❌ Սխալ տեսակ: Օգտագործեք `mk` կամ `lg`:",
+        "addprobk_creating":  "🔄 Ստեղծում եմ ({loc})...",
+        "addprobk_err_create":"❌ Սխալ դասը ստեղծելիս: {msg}",
 
         # ── /add (добавить студента в группу) ─────────────────────────
+        "add_help": (
+            "👥 **Ավելացնել աշակերտին խմբում (Alfa CRM - {loc}):**\n\n"
+            "⚠️ **Ուշադրություն!** Խումբը և աշակերտը պետք է CRM-ում ունենան **{prefix}** պրեֆիքս:\n\n"
+            "Խնդրում ենք գրել հետևյալ ձևաչափով՝\n"
+            "👉 `/add Saakyan Gexam Lego 1`\n\n"
+            "**Օրինակներ՝**\n"
+            "• `/add Saakyan Gexam Lego 1`\n"
+            "• `/add Lego 1, Saakyan Gexam`\n"
+            "• `/add 3402, Lego 1`"
+        ),
+        "add_searching":      "🔄 Փնտրում եմ խումբը և աշակերտին Alfa CRM-ում ({loc})...",
+        "add_group_not_found":"❌ «{query}» հարցման մեջ խումբը չգտնվեց {loc} մասնաճյուղում:\nՍտուգեք խմբի անվանման ճշտությունը:",
+        "add_no_student_q":   "❌ «{query}» հարցման մեջ աշակերտի անունը/ID-ն նշված չէ:",
+        "add_student_not_found": "❌ «{query}» աշակերտը/լիդը չգտնվեց Alfa CRM-ում:\nՍտուգեք անվանման ճշտությունը կամ ուղարկեք ID-ն:",
         "add_no_prefix_grp": (
-            "⚠️ **«{group}» khmby chuni «{prefix}» prefiksy!**\n\n"
-            "Avelajumy argelakrvac e: Khndrum enq nakhevn Alfa CRM-um "
-            "khmbى anvanman skzbum avelajnel «{prefix}» "
-            "(orinak'` `{prefix} | {group}`) ev krknel haranken:"
+            "⚠️ **«{group}» խումբը չունի «{prefix}» պրեֆիքս!**\n\n"
+            "Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում խմբի անվանման սկզբում ավելացնել «{prefix}» "
+            "(օրինակ՝ `{prefix} | {group}`) և կրկնել հրամանը:"
         ),
         "add_no_prefix_std": (
-            "⚠️ **«{student}» ashakerty chuni «{prefix}» prefiksy!**\n\n"
-            "Avelajumy argelakrvac e: Khndrum enq nakhevn Alfa CRM-um "
-            "ashakerty anvanman skzbum avelajnel «{prefix}» "
-            "(orinak'` `{prefix} | {student}`) ev krknel haranken:"
+            "⚠️ **«{student}» աշակերտը չունի «{prefix}» պրեֆիքս!**\n\n"
+            "Ավելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում աշակերտի անվանման սկզբում ավելացնել «{prefix}» "
+            "(օրինակ՝ `{prefix} | {student}`) և կրկնել հրամանը:"
         ),
         "add_success": (
-            "✅ **Hajoxutyamb avelajvec!**\n\n"
-            "👤 Ashakert' **{student}**\n"
-            "👥 Khmb' **{group}**"
+            "✅ **Հաջողությամբ ավելացվեց!**\n\n"
+            "👤 Աշակերտ՝ **{student}**\n"
+            "👥 Խումբ՝ **{group}**"
         ),
-        "add_already":        "ℹ️ «{student}» ashakerty ardem gtanvum e «{group}» khmbi mej:",
-        "add_error":          "❌ Sxal tegi unecav «{student}» ashakerty «{group}» khmbi mej avelajnelu:\n`{msg}`",
+        "add_already":        "ℹ️ «{student}» աշակերտը արդեն իսկ գտնվում է «{group}» խմբում:",
+        "add_error":          "❌ Սխալ տեղի ունեցավ «{student}» աշակերտին «{group}» խմբում ավելացնելիս:\n`{msg}`",
 
         # ── Задачи (tasks) ────────────────────────────────────────────
-        "task_added":         "Arajadrankhy avelajvac e:",
-        "task_empty":         "Arajadrankhneri tsanky datar e:",
-        "task_header":        "📝 **Arajadrankhneri tsank:**\n\n",
-        "task_done_cb":       "✅ Task{n} katarva e:",
-        "task_not_found_cb":  "❌ Task{n} char gtanvec kam ardem katarva e:",
-        "task_all_done":      "🎉 Bolor arajadrankhnery katarvac en:",
+        "task_desc_req":      "Խնդրում ենք նշել առաջադրանքի նկարագրությունը: Օրինակ՝ /addtask Ջնջել խումբը",
+        "task_added":         "✅ Առաջադրանքը ավելացված է ({loc}):",
+        "task_added_push":    "📌 **Նոր առաջադրանք ({loc})!**\n\n👤 Ավելացրեց՝ {user}\n🔹 {desc}",
+        "task_empty":         "Առաջադրանքների ցանկը դատարկ է:",
+        "task_header":        "📝 **{loc} — Առաջադրանքների ցանկ:**\n\n",
+        "task_done_cb":       "✅ Task{n} կատարված է:",
+        "task_done_push":     "✅ **Առաջադրանքը կատարվել է!**\n\n👤 Կատարեց՝ {user}\n🔹 **Task{n}** — {desc}",
+        "task_not_found_cb":  "❌ Այս առաջադրանքը արդեն կատարված է կամ ջնջված։",
+        "task_all_done":      "🎉 Բոլոր առաջադրանքները կատարված են։",
+        "task_not_found_cmd": "❌ Task{n} չի գտնվել կամ արդեն կատարված է:",
+        "task_done_cmd":      "✅ Task{n} — «{desc}» կատարված է:",
+        "task_hint":          "Խնդրում ենք նշել առաջադրանքի համարը, օրինակ՝ /task1",
 
         # ── Общие ─────────────────────────────────────────────────────
-        "no_db":              "Baza'n miacvac che (POSTGRES_URL):",
-        "crm_error":          "❌ Sxal' Alfa CRM-i het kap che:",
-        "searching":          "🔄 Patrvasum em...",
-        "loading":            "🔄 Bertnum em...",
+        "no_db":              "Բազան միացված չէ (POSTGRES_URL):",
+        "crm_error":          "❌ Սխալ՝ չհաջողվեց կապ հաստատել Alfa CRM-ի հետ:",
+        "searching":          "🔄 Փնտրում եմ...",
+        "loading":            "🔄 Բեռնում եմ...",
 
         # ── /prob / /proball ───────────────────────────────────────────
         "prob_no_schedule": (
-            "⚠️ **{loc}** — Pordznakan daseri arazhnagrery nshvac chi:\n"
-            "Khndrum enq khetakel vcharneri bazhni:"
+            "⚠️ **{loc}** — Փորձնական դասերի գրաֆիկը նշված չէ:\n"
+            "Խնդրում ենք դիմել ադմինիստրատորին:"
         ),
-        "no_prob_today":      "Aysor pordznakan daser chka:",
+        "no_prob_today":      "Այսօրվա համար գրանցված փորձնական դասեր չկան:",
+        "prob_today_header":  "🟢 **Այսօրվա գրանցված փորձնական դասերը**",
+        "no_prob_week":       "Այս շաբաթվա համար գրանցված փորձնական դասեր չկան:",
+        "prob_week_header":   "🟢 **Այս շաբաթվա գրանցված փորձնական դասերը**",
+        "prob_freeprob":      "🔄 Հաշվարկում եմ ազատ տեղերը...",
+        "freeprob_header":    "🟢 **Փորձնական դասերի ազատ տեղերը այս շաբաթվա համար**",
+        
+        # ── Start & Registration ──────────────────────────────────────
+        "start_msg": (
+            "Ողջույն: Որպեսզի ես կարողանամ ուղարկել վճարումները խմբին, ինձ անհրաժեշտ է իմանալ ձեր անունը:\n\n"
+            "Գրեք ձեր անունը ռուսերենով (օրինակ՝ Рипсиме):"
+        ),
+        "start_req_ru":       "Խնդրում ենք գրել միայն ռուսերեն տառերով (օրինակ՝ Рипсиме):",
+        "start_success": (
+            "✅ Ձեր անունը պահպանված է որպես '{name}':\n\n"
+            "Այժմ կարող եք ուղարկել հաղորդագրություններ վճարումների համար հետևյալ ձևաչափով՝\n"
+            "Անուն Ազգանուն Գումար Վճարման_Եղանակ"
+        ),
+        
+        # ── Admin commands (ban, unban, users) ───────────────────────
+        "ban_format":         "Նշեք օգտատիրոջ ID-ն: Օրինակ՝ /ban 123456789",
+        "ban_self":           "Դուք չեք կարող բլոկավորել ինքներդ ձեզ:",
+        "ban_success":        "✅ Օգտատեր {uid}-ը բլոկավորված է և չի կարող օգտվել բոտից:",
+        "unban_format":       "Նշեք օգտատիրոջ ID-ն: Օրինակ՝ /unban 123456789",
+        "unban_success":      "✅ Օգտատեր {uid}-ի բլոկավորումը հանված է:",
+        "no_users":           "Ակտիվ օգտատերեր չկան:",
+        "users_header":       "Բոլոր օգտատերերը (Անուն - ID)՝\n\n",
+        
+        # ── Lego commands ─────────────────────────────────────────────
+        "lego_format":        "Նշեք խմբի անունը, օրինակ՝ /lego Spider man",
+        "lego_not_found":     "«{group}» խումբը չի գտնվել բազայում:",
+        "lego_no_themes":     "«{group}» խմբում հասանելի թեմաներ չկան (կամ բոլորն արդեն անցել են):",
+        "lego_themes_list":   "Հասանելի թեմաներ «{group}» խմբի համար:\n{list}\n\nԳրեք այն թեմայի անվանումը, որն ընտրել եք:",
+        "lego_err_group":     "Սխալ․ խումբը բազայում չի գտնվել։",
+        "lego_theme_selected":"✅ «{theme}» թեման ընտրված և հեռացված է «{group}» խմբից:",
+        "lego_theme_invalid": "❌ «{theme}» թեման չի գտնվել «{group}» խմբում։ Համոզվեք, որ այն ճիշտ եք գրել։",
+        "lego_theme_prompt":  "...\n\nԳրեք այն թեմայի անվանումը, որն ընտրել եք:",
+        
+        # ── Help & About & HTML & K ───────────────────────────────────────────
+        "update_success":     "✅ Հաղորդագրությունը հաջողությամբ ուղարկվել է {count} օգտատերերի:",
+        "list_too_long":      "...\n[Ցանկը շատ երկար է]",
+        "about_msg":          "🤖 **Ադմինիստրատորի Օգնական (Admin Helper)**\n\nԱյս բոտը ստեղծված է RobixLab-ի մենեջերների աշխատանքը հեշտացնելու համար:\nԱմբողջական հրամանների համար գրեք /help:",
+        "help_msg":           "📋 **Հրամանների ցանկ**\n\n/help - Հրամաններ\n/about - Տեղեկություն",
+        "khelp_msg": (
+            "📋 **Կոմիտաս — Հրամաններ**\n\n"
+            "🔧 **Առաջադրանքներ:**\n"
+            "/kaddtask [տեքստ] — Ստեղծել առաջադրանք (մասնաճյուղ՝ Կոմիտաս)\n"
+            "/kchecktasks — Կոմիտասի ակտիվ առաջադրանքները\n\n"
+            "📞 **CRM / Sales:**\n"
+            "/addprobk [հեռ.] [mk/lg] [օր] [ժամ] — Ստեղծել անհատական փորձնական դաս\n\n"
+            "⚙️ **Կարգավորումներ:**\n"
+            "/branch — Փոխել ակտիվ մասնաճյուղը\n"
+            "/language — Փոխել ինտերֆեյսի լեզուն"
+        ),
+        "kaddtask_success":   "✅ Կոմիտաս — Առաջադրանքը ավելացված է:",
+        "kaddtask_notify":    "📌 **Նոր առաջադրանք (Կոմիտաս)!**\n\n👤 Ավելացրեց՝ {user}\n🔹 {desc}",
+        "kchecktasks_empty":  "Կոմիտաս — Առաջադրանքների ցանկը դատարկ է:",
+        "kchecktasks_header": "📝 **Կոմիտաս — Առաջադրանքների ցանկ:**\n\n",
+        "html_upload_start":  "Բեռնում և մշակում եմ Lego-ի HTML ֆայլը...",
+        "html_upload_success":"Lego-ի բազան հաջողությամբ թարմացվել է:\nՄշակված խմբեր՝ {g}\nԱվելացված թեմաներ՝ {t}",
+        
+        "room_busy":          "Լսարանը զբաղված է այդ ժամին",
+        "bad_format":         "Սխալ ձևաչափ կամ բացակայող տվյալներ",
+        
+        # ── Add (CRM) ─────────────────────────────────────────────────
+        "add_help":           "👥 **Ավելացնել աշակերտին խմբում (Alfa CRM - {loc}):**\n\n⚠️ **Ուշադրություն!** Խումբը և աշակերտը պետք է CRM-ում ունենան **{prefix}** պրեֆիքս:\n\nԽնդրում ենք գրել հետևյալ ձևաչափով՝\n👉 `/add Saakyan Gexam Lego 1`\n\n**Օրինակներ՝**\n• `/add Saakyan Gexam Lego 1`\n• `/add Lego 1, Saakyan Gexam`\n• `/add 3402, Lego 1`",
+        "add_search":         "🔄 Փնտրում եմ խումբը և աշակերտին Alfa CRM-ում ({loc})...",
+        "add_err_group":      "❌ «{query}» հարցման մեջ խումբը չգտնվեց {loc} տեղադրությունում:\nՍտուգեք խմբի անվանման ճշտությունը:",
+        "add_err_no_student": "❌ «{query}» հարցման մեջ աշակերտի անունը/ID-ն նշված չէ:",
+        "add_err_student":    "❌ «{query}» աշակերտը/լիդը չգտնվեց Alfa CRM-ում:\nՍտուգեք անվանման ճշտությունը կամ ուղարկեք ID-ն:",
+        "add_err_g_prefix":   "⚠️ **«{group}» խումբը չունի «{prefix}» պրեֆիքս!**\n\nԱվելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում խմբի անվանման սկզբում ավելացնել «{prefix}» (օրինակ՝ `{prefix} | {group}`) և կրկնել հրամանը:",
+        "add_err_s_prefix":   "⚠️ **«{student}» աշակերտը չունի «{prefix}» պրեֆիքս!**\n\nԱվելացումն արգելափակված է: Խնդրում ենք նախ Alfa CRM-ում աշակերտի անվանման սկզբում ավելացնել «{prefix}» (օրինակ՝ `{prefix} | {student}`) և կրկնել հրամանը:",
+        "add_already":        "ℹ️ «{student}» աշակերտը արդեն իսկ գտնվում է «{group}» խմբում:",
+        "add_success":        "✅ **Հաջողությամբ ավելացվեց!**\n\n👤 Աշակերտ՝ **{student}**\n👥 Խումբ՝ **{group}**",
+        "add_fail":           "❌ Սխալ տեղի ունեցավ «{student}» աշակերտին «{group}» խմբում ավելացնելիս:\n`{err}`",
+        
+        # ── Cron & Teachers ───────────────────────────────────────────
+        "cron_tasks_header":  "⚠️ **Ուշադրություն! Անավարտ առաջադրանքներ**\n\n",
+        "cron_task_item":     "🔹 **Task{id}** - {desc}\n",
+        "teacher_alert":      "🔔 **Ուշադրություն**\n\nՀարգելի {name}, դուք ունեք **{count}** չնշված (պլանավորված) դաս այսօր ({today}):\n\n**Ժամերը:**\n{times}\n\nԽնդրում ենք մուտք գործել CRM և նշել դասերը որպես անցկացված:",
+        "testteacher_start":  "🔄 Սկսում եմ չնշված դասերի ստուգումը...",
+        "testteacher_end":    "✅ Ստուգումն ավարտվեց:\nՈւղարկված նամակներ՝ {count}",
+        "not_a_teacher":      "❌ Դուք գրանցված չեք որպես ուսուցիչ համակարգում:"
     },
 
     "ru": {
@@ -97,18 +225,32 @@ STRINGS: dict = {
         "language_choose":    "Выберите язык:",
 
         # ── Платёж (process_payment) ──────────────────────────────────
-        "payment_searching":  "🔄 Ищу в Alfa CRM...",
-        "payment_not_found":  "❌ Лид или клиент с номером {phone} не найден:",
+        "payment_searching":  "🔄 Ищу студента в CRM...",
+        "payment_not_found":  "❌ Студент не найден в Alfa CRM. Для подтверждения отправьте ссылку на его карточку:",
         "payment_wrong_loc": (
-            "❌ Найден «{name}», но он не из локации «{loc}»:\n"
+            "❌ Найден «{name}», но он не из локации {loc}:\n"
             "Для подтверждения платежа отправьте CRM-ссылку на карточку:"
         ),
         "payment_success":    "✅ Платёж зарегистрирован в CRM и ДДС ({name}):\n\n{text}",
-        "payment_error":      "❌ Ошибка при создании платежа в CRM:",
+        "payment_error":      "❌ Ошибка при создании платежа в CRM. Проверьте Alfa CRM:",
         "payment_pending": (
-            "❌ Студент не найден в Alfa CRM:\n"
-            "Для подтверждения платежа отправьте CRM-ссылку на карточку:"
+            "❌ Не удалось найти ID студента:\n"
+            "Отправьте правильную ссылку на карточку (например, `https://.../customer/view?id=12345`) или ID:"
         ),
+        "payment_no_pending": "❌ У вас нет ожидающего подтверждения платежа.",
+        "payment_format_err": (
+            "❌ **Неверный формат**\n\n"
+            "Напишите в следующем формате:\n"
+            "👉 `Имя Фамилия Сумма Способ`\n\n"
+            "Пример: `Aram Grigoryan 50000 N`\n\n"
+            "💳 **Доступные способы:**\n"
+            "• `n` — Наличные\n"
+            "• `b.n` — Терминал (Безналичные)\n"
+            "• `c` — Перевод (Карта)\n\n"
+            "⚠️ Сумма должна быть только цифрами, а способ — из указанных вариантов."
+        ),
+        "payment_processing": "🔄 Связываюсь с Alfa CRM...",
+        "unreg_user":         "Сначала зарегистрируйте свое имя командой /start:",
 
         # ── /addprob ──────────────────────────────────────────────────
         "addprob_searching":  "🔄 Ищу...",
@@ -123,8 +265,37 @@ STRINGS: dict = {
         ),
         "addprob_already":    "⚠️ Студент ({name}) уже записан на этот урок:",
         "addprob_error":      "❌ Ошибка при добавлении на урок: {msg}",
+        "addprob_format": (
+            "❌ **Неверный формат**\n\n"
+            "Используйте: `/addprob <телефон> <тип> <дата> <час>`\n"
+            "Пример: `/addprob 077000700 mk 21.09 15`\n\n"
+            "Типы: `mk` (MakeBlock) или `lg` (LEGO Education)"
+        ),
+        "addprobk_format": (
+            "❌ **Неверный формат**\n\n"
+            "Используйте: `/addprobk <телефон> <тип> <дата> <час>`\n"
+            "Пример: `/addprobk 077000700 mk 21.09 15`\n\n"
+            "Типы: `mk` (MakeBlock) или `lg` (LEGO Education)"
+        ),
+        "invalid_type":       "❌ Неверный тип: используйте `mk` или `lg`:",
+        "addprobk_creating":  "🔄 Создаю ({loc})...",
+        "addprobk_err_create":"❌ Ошибка при создании урока: {msg}",
 
         # ── /add (добавить студента в группу) ─────────────────────────
+        "add_help": (
+            "👥 **Добавить ученика в группу (Alfa CRM - {loc}):**\n\n"
+            "⚠️ **Внимание!** Группа и студент должны иметь префикс **{prefix}** в CRM:\n\n"
+            "Используйте формат:\n"
+            "👉 `/add Saakyan Gexam Lego 1`\n\n"
+            "**Примеры:**\n"
+            "• `/add Saakyan Gexam Lego 1`\n"
+            "• `/add Lego 1, Saakyan Gexam`\n"
+            "• `/add 3402, Lego 1`"
+        ),
+        "add_searching":      "🔄 Ищу группу и студента в Alfa CRM ({loc})...",
+        "add_group_not_found":"❌ В запросе «{query}» группа не найдена в {loc}:\nПроверьте правильность названия.",
+        "add_no_student_q":   "❌ В запросе «{query}» не указано имя/ID ученика:",
+        "add_student_not_found": "❌ Ученик/лид «{query}» не найден в Alfa CRM:\nПроверьте имя или отправьте ID.",
         "add_no_prefix_grp": (
             "⚠️ **Группа «{group}» не имеет префикса «{prefix}»!**\n\n"
             "Добавление заблокировано: Добавьте «{prefix}» в начало имени "
@@ -144,37 +315,159 @@ STRINGS: dict = {
         "add_error":          "❌ Ошибка при добавлении «{student}» в группу «{group}»:\n`{msg}`",
 
         # ── Задачи (tasks) ────────────────────────────────────────────
-        "task_added":         "Задача добавлена!",
+        "task_desc_req":      "Укажите описание задачи. Пример: /addtask Удалить группу",
+        "task_added":         "✅ Задача добавлена ({loc}):",
+        "task_added_push":    "📌 **Новая задача ({loc})!**\n\n👤 Добавил: {user}\n🔹 {desc}",
         "task_empty":         "Список задач пуст:",
-        "task_header":        "📝 **Список задач:**\n\n",
+        "task_header":        "📝 **{loc} — Список задач:**\n\n",
         "task_done_cb":       "✅ Task{n} выполнен:",
-        "task_not_found_cb":  "❌ Task{n} не найден или уже выполнен:",
-        "task_all_done":      "🎉 Все задачи выполнены:",
+        "task_done_push":     "✅ **Задача выполнена!**\n\n👤 Выполнил: {user}\n🔹 **Task{n}** — {desc}",
+        "task_not_found_cb":  "❌ Задача не найдена или уже выполнена.",
+        "task_all_done":      "🎉 Все задачи выполнены.",
+        "task_not_found_cmd": "❌ Task{n} не найден или уже выполнен.",
+        "task_done_cmd":      "✅ Task{n} — «{desc}» выполнен:",
+        "task_hint":          "Укажите номер задачи, например: /task1",
 
         # ── Общие ─────────────────────────────────────────────────────
         "no_db":              "База не подключена (POSTGRES_URL):",
-        "crm_error":          "❌ Ошибка подключения к Alfa CRM:",
+        "crm_error":          "❌ Ошибка: не удалось связаться с Alfa CRM:",
         "searching":          "🔄 Ищу...",
         "loading":            "🔄 Загружаю...",
 
         # ── /prob / /proball ───────────────────────────────────────────
         "prob_no_schedule": (
-            "⚠️ **{loc}** — Расписание пробных уроков не настроено:\n"
-            "Обратитесь к администратору:"
+            "⚠️ **{loc}** — График пробных уроков не настроен:\n"
+            "Обратитесь к администратору."
         ),
         "no_prob_today":      "Сегодня пробных уроков нет:",
+        "prob_today_header":  "🟢 **Пробные уроки на сегодня**",
+        "no_prob_week":       "На этой неделе пробных уроков нет:",
+        "prob_week_header":   "🟢 **Пробные уроки на эту неделю**",
+        "prob_freeprob":      "🔄 Рассчитываю свободные места...",
+        "freeprob_header":    "🟢 **Свободные места на пробные на эту неделю**",
+        
+        # ── Start & Registration ──────────────────────────────────────
+        "start_msg": (
+            "Привет! Чтобы я мог отправлять платежи в группу, мне нужно знать твое имя.\n\n"
+            "Напиши свое имя на русском (например: Рипсиме):"
+        ),
+        "start_req_ru":       "Пожалуйста, используй только русские буквы (например: Рипсиме):",
+        "start_success": (
+            "✅ Твое имя сохранено как '{name}':\n\n"
+            "Теперь ты можешь отправлять платежи в формате:\n"
+            "Имя Фамилия Сумма Способ_Оплаты"
+        ),
+        
+        # ── Admin commands (ban, unban, users) ───────────────────────
+        "ban_format":         "Укажите ID пользователя. Пример: /ban 123456789",
+        "ban_self":           "Вы не можете заблокировать себя:",
+        "ban_success":        "✅ Пользователь {uid} заблокирован:",
+        "unban_format":       "Укажите ID пользователя. Пример: /unban 123456789",
+        "unban_success":      "✅ Пользователь {uid} разблокирован:",
+        "no_users":           "Активных пользователей нет:",
+        "users_header":       "Все пользователи (Имя - ID):\n\n",
+        
+        # ── Lego commands ─────────────────────────────────────────────
+        "lego_format":        "Укажите имя группы, например: /lego Spider man",
+        "lego_not_found":     "Группа «{group}» не найдена в базе:",
+        "lego_no_themes":     "В группе «{group}» нет доступных тем (или все пройдены):",
+        "lego_themes_list":   "Доступные темы для группы «{group}»:\n{list}\n\nНапишите выбранную тему:",
+        "lego_err_group":     "Ошибка: группа не найдена в базе.",
+        "lego_theme_selected":"✅ Тема «{theme}» выбрана и удалена из группы «{group}»:",
+        "lego_theme_invalid": "❌ Тема «{theme}» не найдена в группе «{group}». Проверьте правильность.",
+        "lego_theme_prompt":  "...\n\nНапишите выбранную тему:",
+        
+        # ── Help & About & HTML & K ───────────────────────────────────────────
+        "update_success":     "✅ Сообщение успешно отправлено {count} пользователям:",
+        "list_too_long":      "...\n[Список слишком длинный]",
+        "about_msg": (
+            "🤖 **Помощник администратора (Admin Helper)**\n\n"
+            "Этот бот создан для упрощения работы менеджеров, администраторов и преподавателей RobixLab в разных филиалах.\n\n"
+            "👑 **Менеджеры и администраторы**\n"
+            "• Автоматическая регистрация платежей в разных кассах (по филиалам).\n"
+            "• Создание и управление задачами (Task) филиала.\n"
+            "• Ежедневные автоматические напоминания о незавершенных задачах.\n"
+            "• Управление пользователями.\n\n"
+            "📞 **Отдел продаж (Sales / Alfa CRM)**\n"
+            "• Просмотр и добавление регистраций на пробные уроки по выбранному филиалу.\n"
+            "• Добавление учеников в группы с правильными префиксами (/add).\n\n"
+            "⚙️ **Настройки**\n"
+            "• /branch — Выбрать или изменить активный филиал.\n"
+            "• /language — Изменить язык (Հայերեն/Русский).\n\n"
+            "Для получения полного списка команд напишите /help:\n\n"
+            "Бот создан Арамом Григоряном."
+        ),
+        "help_msg": (
+            "📋 **Список команд**\n\n"
+            "👑 **Менеджеры и администраторы**\n"
+            "• **Платеж**: напишите текстом (например: `Aram Grigoryan 50000 N`)\n"
+            "  (n-наличные, b.n-терминал, c-карта)\n"
+            "/addtask [текст] - Создать задачу для текущего филиала\n"
+            "/checktasks - Показать задачи текущего филиала\n"
+            "/getusers - Список всех пользователей\n"
+            "/ban [ID] - Заблокировать\n"
+            "/unban [ID] - Разблокировать\n\n"
+            "📞 **Отдел продаж (Sales / Alfa CRM)**\n"
+            "/add [Ученик] [Группа] - Добавить ученика в группу (проверяет префикс)\n"
+            "/addprob [телефон] [mk/lg] [дата] [время] - Записать на групповой пробный\n"
+            "/addprobk [телефон] [mk/lg] [дата] [время] - Создать индивидуальный пробный\n"
+            "/prob - Пробные уроки на сегодня (текущий филиал)\n"
+            "/proball - Пробные уроки на неделю (текущий филиал)\n"
+            "/getprob - Записанные на эту неделю\n"
+            "/getweek - Записанные на неделю (Сегодня -> суббота)\n"
+            "/freeprob - Свободные места на пробный урок\n\n"
+            "⚙️ **Настройки**\n"
+            "/branch - Установить активный филиал\n"
+            "/language - Выбрать язык\n\n"
+            "🎓 **Раздел для преподавателей**\n"
+            "/lego [тема] - Найти открытые темы (например: /lego Spider man)\n"
+            "/myschedule - Посмотреть свое расписание на сегодня и завтра"
+        ),
+        "khelp_msg": (
+            "📋 **Комитас — Команды**\n\n"
+            "🔧 **Задачи:**\n"
+            "/kaddtask [текст] — Создать задачу (филиал Комитас)\n"
+            "/kchecktasks — Активные задачи филиала Комитас\n\n"
+            "📞 **CRM / Sales:**\n"
+            "/addprobk [тел.] [mk/lg] [день] [время] — Создать индивидуальный пробный урок\n\n"
+            "⚙️ **Настройки:**\n"
+            "/branch — Изменить активный филиал\n"
+            "/language — Изменить язык интерфейса"
+        ),
+        "kaddtask_success":   "✅ Комитас — Задача добавлена:",
+        "kaddtask_notify":    "📌 **Новая задача (Комитас)!**\n\n👤 Добавил: {user}\n🔹 {desc}",
+        "kchecktasks_empty":  "Комитас — Список задач пуст:",
+        "kchecktasks_header": "📝 **Комитас — Список задач:**\n\n",
+        "html_upload_start":  "Загружаю и обрабатываю HTML файл Lego...",
+        "html_upload_success":"База Lego успешно обновлена:\nОбработано групп: {g}\nДобавлено тем: {t}",
+        
+        "room_busy":          "Аудитория занята в это время",
+        "bad_format":         "Неверный формат или отсутствуют данные",
+        
+        # ── Add (CRM) ─────────────────────────────────────────────────
+        "add_help":           "👥 **Добавить ученика в группу (Alfa CRM - {loc}):**\n\n⚠️ **Внимание!** Группа и ученик должны иметь префикс **{prefix}** в CRM:\n\nПожалуйста, пишите в следующем формате:\n👉 `/add Saakyan Gexam Lego 1`\n\n**Примеры:**\n• `/add Saakyan Gexam Lego 1`\n• `/add Lego 1, Saakyan Gexam`\n• `/add 3402, Lego 1`",
+        "add_search":         "🔄 Ищу группу и ученика в Alfa CRM ({loc})...",
+        "add_err_group":      "❌ Группа «{query}» не найдена в {loc}:\nПроверьте правильность названия группы.",
+        "add_err_no_student": "❌ В запросе «{query}» не указано имя/ID ученика:",
+        "add_err_student":    "❌ Ученик/лид «{query}» не найден в Alfa CRM:\nПроверьте правильность или укажите ID:",
+        "add_err_g_prefix":   "⚠️ **Группа «{group}» не имеет префикса «{prefix}»!**\n\nДобавление заблокировано. Сначала добавьте «{prefix}» в начале названия группы в Alfa CRM (например: `{prefix} | {group}`) и повторите команду:",
+        "add_err_s_prefix":   "⚠️ **Ученик «{student}» не имеет префикса «{prefix}»!**\n\nДобавление заблокировано. Сначала добавьте «{prefix}» в начале имени ученика в Alfa CRM (например: `{prefix} | {student}`) и повторите команду:",
+        "add_already":        "ℹ️ Ученик «{student}» уже находится в группе «{group}»:",
+        "add_success":        "✅ **Успешно добавлено!**\n\n👤 Ученик: **{student}**\n👥 Группа: **{group}**",
+        "add_fail":           "❌ Ошибка при добавлении ученика «{student}» в группу «{group}»:\n`{err}`",
+        
+        # ── Cron & Teachers ───────────────────────────────────────────
+        "cron_tasks_header":  "⚠️ **Внимание! Незавершенные задачи**\n\n",
+        "cron_task_item":     "🔹 **Task{id}** - {desc}\n",
+        "teacher_alert":      "🔔 **Внимание**\n\nУважаемый(ая) {name}, у вас **{count}** неотмеченных (запланированных) уроков на сегодня ({today}):\n\n**Время:**\n{times}\n\nПожалуйста, войдите в CRM и отметьте уроки как проведенные.",
+        "testteacher_start":  "🔄 Начинаю проверку неотмеченных уроков...",
+        "testteacher_end":    "✅ Проверка завершена:\nОтправлено писем: {count}",
+        "not_a_teacher":      "❌ Вы не зарегистрированы как преподаватель в системе:"
     },
 }
 
 
 def t(key: str, lang: str, **kwargs) -> str:
-    """
-    Возвращает переведённую строку по ключу и языку.
-    При отсутствии ключа — возвращает сам ключ (не падает).
-    Примеры:
-        t("location_set", "ru", name="Комитас")  → "✅ Локация изменена: **Комитас**"
-        t("task_added",   "hy")                  → "Arajadrankhy avelajvac e:"
-    """
     text: str = STRINGS.get(lang, STRINGS["hy"]).get(key, key)
     if kwargs:
         try:
