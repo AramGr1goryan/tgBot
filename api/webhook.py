@@ -198,6 +198,14 @@ def _parse_lessons(items, tz):
         })
     return booked_slots
 
+def check_crm_prefix(name: str, prefix: str) -> bool:
+    if not name or not prefix: return False
+    n = name.upper()
+    p = prefix.upper()
+    return (n.startswith(f"{p} |") or 
+            n.startswith(f"{p}|") or 
+            n.startswith(f"{p}. |") or 
+            n.startswith(f"{p}.|"))
 async def get_alfacrm_customer_by_name(name: str, crm_prefix: str = None):
     """Search CRM customer by name. If crm_prefix given, filters to that location only."""
     token = await get_alfacrm_token()
@@ -230,8 +238,7 @@ async def get_alfacrm_customer_by_name(name: str, crm_prefix: str = None):
                 if items:
                     if crm_prefix:
                         filtered = [i for i in items
-                                    if i.get("name", "").startswith(f"{crm_prefix} |")
-                                    or i.get("name", "").startswith(f"{crm_prefix}|")]
+                                    if check_crm_prefix(i.get("name", ""), crm_prefix)]
                         if filtered:
                             return filtered[0]
                     else:
@@ -260,8 +267,7 @@ async def get_alfacrm_customer_by_name(name: str, crm_prefix: str = None):
                         match = any(ow in item_name for ow in other_words) or len(items) == 1
                         if match:
                             if crm_prefix:
-                                if (item.get("name", "").startswith(f"{crm_prefix} |")
-                                        or item.get("name", "").startswith(f"{crm_prefix}|")):
+                                if check_crm_prefix(item.get("name", ""), crm_prefix):
                                     return item
                             else:
                                 return item
@@ -331,8 +337,7 @@ async def get_alfacrm_customer_by_phone(phone_raw: str, crm_prefix: str = None):
             if items:
                 if crm_prefix:
                     filtered = [i for i in items
-                                if i.get("name", "").startswith(f"{crm_prefix} |")
-                                or i.get("name", "").startswith(f"{crm_prefix}|")]
+                                if check_crm_prefix(i.get("name", ""), crm_prefix)]
                     return filtered[0] if filtered else None
                 return items[0]
     except Exception as e:
@@ -1948,7 +1953,7 @@ async def cmd_add_student_to_group(message: types.Message):
     customer_id = customer.get("id")
 
     # Check location prefix for group
-    if not (group_name.upper().startswith(f"{loc['crm_prefix']} |") or group_name.upper().startswith(f"{loc['crm_prefix']}|")):
+    if not check_crm_prefix(group_name, loc['crm_prefix']):
         await status_msg.edit_text(
             t("add_err_g_prefix", lang, group=group_name, prefix=loc['crm_prefix']),
             parse_mode="Markdown"
@@ -1956,7 +1961,7 @@ async def cmd_add_student_to_group(message: types.Message):
         return
 
     # Check location prefix for student
-    if not (customer_name.upper().startswith(f"{loc['crm_prefix']} |") or customer_name.upper().startswith(f"{loc['crm_prefix']}|")):
+    if not check_crm_prefix(customer_name, loc['crm_prefix']):
         await status_msg.edit_text(
             t("add_err_s_prefix", lang, student=customer_name, prefix=loc['crm_prefix']),
             parse_mode="Markdown"
@@ -2331,7 +2336,7 @@ async def process_payment(message: types.Message):
                     tz = zoneinfo.ZoneInfo("Asia/Yerevan")
                     date_str = datetime.now(tz).strftime("%d.%m.%Y")
                     student_name = customer.get("name", t("unknown", lang))
-                    await append_payment_to_sheet(date_str, student_name, pending['amount'], pending['method_raw'])
+                    await append_payment_to_sheet(date_str, student_name, pending['amount'], pending['method_raw'], tab_name=loc.get("sheets_tab"))
                     await processing_msg.edit_text(t("payment_success", lang, name=student_name, text=pending['response_text']))
                     if GROUP_CHAT_ID:
                         try:
@@ -2380,7 +2385,7 @@ async def process_payment(message: types.Message):
     customer_id = customer.get("id")
     
     is_valid_loc = False
-    if customer_name.startswith(f"{loc['crm_prefix']} |") or customer_name.startswith(f"{loc['crm_prefix']}|"):
+    if check_crm_prefix(customer_name, loc['crm_prefix']):
         is_valid_loc = True
     else:
         valid_rooms = [v for v in loc["rooms"].values() if v is not None]
@@ -2401,7 +2406,7 @@ async def process_payment(message: types.Message):
     if success:
         tz = zoneinfo.ZoneInfo("Asia/Yerevan")
         date_str = datetime.now(tz).strftime("%d.%m.%Y")
-        await append_payment_to_sheet(date_str, customer_name, amount_int, payment_method_raw)
+        await append_payment_to_sheet(date_str, customer_name, amount_int, payment_method_raw, tab_name=loc.get("sheets_tab"))
         await processing_msg.edit_text(t("payment_success", lang, name=customer_name, text=response_text))
         if GROUP_CHAT_ID:
             try:

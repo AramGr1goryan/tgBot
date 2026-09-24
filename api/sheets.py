@@ -28,9 +28,10 @@ def get_creds():
 
 agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds)
 
-async def append_payment_to_sheet(date_str: str, student_name: str, amount: int, method_raw: str):
+async def append_payment_to_sheet(date_str: str, student_name: str, amount: int, method_raw: str, tab_name: str = None):
     sheet_id = os.environ.get("GOOGLE_SHEET_ID")
-    tab_name = os.environ.get("GOOGLE_SHEET_TAB_NAME", "Оплаты Манташяна")
+    if not tab_name:
+        tab_name = os.environ.get("GOOGLE_SHEET_TAB_NAME", "Оплаты Манташяна")
     
     if not sheet_id:
         return False, "GOOGLE_SHEET_ID is not configured"
