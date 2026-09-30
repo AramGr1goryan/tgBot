@@ -2377,7 +2377,7 @@ async def _execute_payment(message, customer_id, payer_name, customer_name, amou
             try:
                 chat_id_int = int(GROUP_CHAT_ID)
                 thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
-                await bot.send_message(
+                await message.bot.send_message(
                     chat_id_int, response_text, message_thread_id=thread_id_int
                 )
             except Exception as e:
