@@ -2436,16 +2436,23 @@ async def cmd_check_kassa(message: types.Message):
     match = (summ == last_h)
     
     response_text = f"По ДДС: {last_h}\nКасса факт: {summ}\n\n"
+    diff_text = ""
     if match:
         response_text += "✅ Суммы совпадают!"
     else:
-        response_text += "❌ Внимание! Суммы НЕ совпадают!"
+        try:
+            diff = summ - last_h
+            diff_text = f" (разница: {diff:g})"
+        except Exception:
+            pass
+        response_text += f"❌ Внимание! Суммы НЕ совпадают!{diff_text}"
         
     await processing_msg.edit_text(response_text)
     
     # Отправка в группу
     executor_name = EXECUTORS[user_id]
-    group_msg = f"👤 {executor_name} проверял(а) кассу ({loc['crm_prefix']}):\nСумма по ДДС: {last_h}\nФакт: {summ}\n{'✅ Совпадает' if match else '❌ Расхождение!'}"
+    group_status = '✅ Совпадает' if match else f'❌ Расхождение!{diff_text}'
+    group_msg = f"👤 {executor_name} проверял(а) кассу ({loc['crm_prefix']}):\nСумма по ДДС: {last_h}\nФакт: {summ}\n{group_status}"
     
     if GROUP_CHAT_ID:
         try:
