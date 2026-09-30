@@ -133,3 +133,41 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
         msg = f"Внутренняя ошибка при записи в ДДС: {str(e)}"
         print(f"Error appending to Google Sheets: {e}")
         return False, msg
+
+async def get_last_h_value(tab_name: str):
+    sheet_id = os.environ.get("GOOGLE_SHEET_ID")
+    if not sheet_id:
+        return False, "GOOGLE_SHEET_ID is not configured"
+        
+    try:
+        _ = get_creds()
+        client = await agcm.authorize()
+        spreadsheet = await client.open_by_key(sheet_id)
+        worksheet = await spreadsheet.worksheet(tab_name)
+        
+        h_values = await worksheet.col_values(8)
+        non_empty = [v for v in h_values if v.strip()]
+        
+        if non_empty:
+            val = non_empty[-1]
+            cleaned = val.replace(" ", "").replace("\xa0", "").replace(",", ".")
+            try:
+                num = float(cleaned)
+                if num.is_integer():
+                    return True, int(num)
+                return True, num
+            except ValueError:
+                return True, val
+        else:
+            return True, 0
+            
+    except gspread.exceptions.WorksheetNotFound:
+        return False, f"Не найдена вкладка '{tab_name}' в таблице."
+    except gspread.exceptions.SpreadsheetNotFound:
+        return False, "Таблица по указанному ID не найдена."
+    except GoogleAuthError as e:
+        return False, "Ошибка авторизации Google."
+    except gspread.exceptions.APIError as e:
+        return False, f"API Error: {str(e)}"
+    except Exception as e:
+        return False, f"Unexpected error: {str(e)}"
