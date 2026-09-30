@@ -206,10 +206,10 @@ def check_crm_prefix(name: str, prefix: str) -> bool:
             n.startswith(f"{p}|") or 
             n.startswith(f"{p}. |") or 
             n.startswith(f"{p}.|"))
-async def get_alfacrm_customer_by_name(name: str, crm_prefix: str = None):
-    """Search CRM customer by name. If crm_prefix given, filters to that location only."""
+async def get_alfacrm_customers_by_name(name: str):
+    """Search CRM customers by name and return a list of matches."""
     token = await get_alfacrm_token()
-    if not token: return None
+    if not token: return []
     
     headers = {
         "X-ALFACRM-TOKEN": token,
@@ -225,6 +225,9 @@ async def get_alfacrm_customer_by_name(name: str, crm_prefix: str = None):
         search_names.append(rus_name)
         
     client = get_http_client()
+    found_customers = []
+    seen_ids = set()
+    
     for search_n in search_names:
         try:
             response = await client.post(
@@ -235,16 +238,15 @@ async def get_alfacrm_customer_by_name(name: str, crm_prefix: str = None):
             )
             if response.status_code == 200:
                 items = response.json().get("items", [])
-                if items:
-                    if crm_prefix:
-                        filtered = [i for i in items
-                                    if check_crm_prefix(i.get("name", ""), crm_prefix)]
-                        if filtered:
-                            return filtered[0]
-                    else:
-                        return items[0]
+                for item in items:
+                    if item.get("id") not in seen_ids:
+                        found_customers.append(item)
+                        seen_ids.add(item.get("id"))
         except Exception as e:
             print(f"Error searching customer '{search_n}': {e}")
+            
+    if found_customers:
+        return found_customers
             
     words = [w for w in clean_name.split() if len(w) >= 2]
     rus_words = [w for w in rus_name.split() if len(w) >= 2]
@@ -265,16 +267,13 @@ async def get_alfacrm_customer_by_name(name: str, crm_prefix: str = None):
                     for item in items:
                         item_name = item.get("name", "").lower()
                         match = any(ow in item_name for ow in other_words) or len(items) == 1
-                        if match:
-                            if crm_prefix:
-                                if check_crm_prefix(item.get("name", ""), crm_prefix):
-                                    return item
-                            else:
-                                return item
+                        if match and item.get("id") not in seen_ids:
+                            found_customers.append(item)
+                            seen_ids.add(item.get("id"))
             except Exception as e:
                 print(f"Error searching candidate word '{word}': {e}")
             
-    return None
+    return found_customers
 
 async def get_alfacrm_customer_by_id(customer_id: int):
     token = await get_alfacrm_token()
@@ -614,7 +613,7 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
                                   payer_name: str, location_config: dict = None):
     """Create payment in CRM. Uses location_config for account IDs and location_id."""
     token = await get_alfacrm_token()
-    if not token: return False
+    if not token: return False, "Անհնար է ստանալ AlfaCRM թոքեն (Token error)"
     
     headers = {
         "X-ALFACRM-TOKEN": token,
@@ -624,7 +623,9 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
     
     # Resolve location config (fall back to GN defaults if not provided)
     loc = location_config or get_location(DEFAULT_LOCATION)
-    accounts = loc["accounts"]
+    accounts = loc.get("accounts", {})
+    if not accounts:
+        return False, f"Դրամարկղները նշված չեն այս մասնաճյուղի համար ({loc.get('name', 'GN')})"
     
     # Account Mapping by method
     method = method_raw.lower()
@@ -633,15 +634,21 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
     elif method == 'b.n':
         pay_account_id = accounts["terminal"]
     elif method in ['c', 'с']:
-        pay_account_id = accounts["card"]
+        pay_account_id = accounts.get("card")
     else:
-        pay_account_id = accounts["cash"]
+        pay_account_id = accounts.get("cash")
+        
+    if not pay_account_id:
+        return False, f"Դրամարկղը ({method}) չի գտնվել համակարգում այս մասնաճյուղի համար"
         
     # Item Mapping
     if amount == 2000:
         income_item_id = 3 # Пробный урок
     else:
         income_item_id = 1 # Курсы
+        
+    if amount <= 0:
+        return False, f"Գումարը պետք է լինի 0-ից մեծ: Նշված է՝ {amount}"
         
     today = datetime.now(zoneinfo.ZoneInfo('Asia/Yerevan')).strftime("%d.%m.%Y")
     
@@ -666,13 +673,28 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
                 timeout=10.0
             )
             if response.status_code == 200:
-                return True
+                return True, ""
             else:
+                error_msg = f"HTTP {response.status_code}"
+                try:
+                    data = response.json()
+                    if "message" in data:
+                        error_msg = data["message"]
+                    elif "errors" in data:
+                        error_msg = str(data["errors"])
+                    elif "error" in data:
+                        error_msg = str(data["error"])
+                except Exception:
+                    error_msg = response.text[:200]
                 print(f"Alfa CRM Pay Error: {response.status_code} - {response.text}")
-                return False
+                return False, f"CRM API Error: {error_msg}"
+        except httpx.TimeoutException:
+            print("Error creating payment: Timeout")
+            return False, "CRM-ը չի պատասխանում (Timeout)"
         except Exception as e:
             print(f"Error creating payment: {e}")
-    return False
+            return False, f"Network/Internal Error: {str(e)}"
+    return False, "Unknown Error"
 
 async def _fetch_status(client, headers, date_from, date_to, status_val):
     items = []
@@ -2310,6 +2332,62 @@ def is_url_or_link(text: str) -> bool:
     t = text.lower()
     return 'http://' in t or 'https://' in t or 's20.online' in t or 'alfacrm' in t or 'customer/view' in t or 'lead/view' in t
 
+async def update_alfacrm_customer_name(customer_id: int, new_name: str):
+    token = await get_alfacrm_token()
+    if not token: return False
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    client = get_http_client()
+    try:
+        response = await client.post(
+            f"https://robixlab.s20.online/v2api/1/customer/update?id={customer_id}",
+            headers=headers,
+            json={"name": new_name},
+            timeout=5.0
+        )
+        return response.status_code == 200
+    except Exception as e:
+        print(f"Error updating customer name: {e}")
+        return False
+
+async def _execute_payment(message, customer_id, payer_name, customer_name, amount_int, payment_method_raw, response_text, loc, lang, processing_msg=None):
+    success, error_msg = await create_alfacrm_payment(customer_id, amount_int, payment_method_raw, payer_name, location_config=loc)
+    
+    if success:
+        import zoneinfo
+        from datetime import datetime
+        tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+        date_str = datetime.now(tz).strftime("%d.%m.%Y")
+        
+        sheet_success, sheet_err = await append_payment_to_sheet(date_str, customer_name, amount_int, payment_method_raw, tab_name=loc.get("sheets_tab"))
+        if not sheet_success:
+            response_text += f"\n\n⚠️ **Ուշադրություն (Внимание):** Alfa CRM-ում գրանցվել է, բայց ԴԴՍ աղյուսակում ավելացնելիս առաջացավ սխալ: Ստուգեք աղյուսակը:\nՊատճառ՝ {sheet_err}"
+            
+        if processing_msg:
+            await processing_msg.edit_text(t("payment_success", lang, name=customer_name, text=response_text))
+        else:
+            await message.answer(t("payment_success", lang, name=customer_name, text=response_text))
+            
+        if GROUP_CHAT_ID:
+            try:
+                chat_id_int = int(GROUP_CHAT_ID)
+                thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+                await bot.send_message(
+                    chat_id_int, response_text, message_thread_id=thread_id_int
+                )
+            except Exception as e:
+                print(f"Failed to send to group: {e}")
+    else:
+        if processing_msg:
+            await processing_msg.edit_text(t("payment_error", lang, msg=error_msg))
+        else:
+            await message.answer(t("payment_error", lang, msg=error_msg))
+
 @dp.message(F.chat.type == "private")
 async def process_payment(message: types.Message):
     if not message.text or message.chat.type != "private":
@@ -2345,39 +2423,77 @@ async def process_payment(message: types.Message):
             is_valid_payment_cmd = True
 
     if not is_valid_payment_cmd:
-        # User is replying with link or ID for pending payment
+        # User is replying with link or ID for pending payment, or confirming prefix/selection
         if message.from_user.id in PENDING_PAYMENTS:
+            pending = PENDING_PAYMENTS[message.from_user.id]
+            state = pending.get('state', 'need_id')
+            
+            if state == 'confirm_prefix':
+                ans = text.strip().lower()
+                if ans in ['да', 'yes', 'ayo', 'այո', 'иа', '1', '+']:
+                    customer = pending['customer']
+                    processing_msg = await message.answer(t("payment_processing", lang))
+                    new_name = f"{loc['crm_prefix']} | {customer.get('name', '')}"
+                    await update_alfacrm_customer_name(customer['id'], new_name)
+                    payer_name = customer.get('legal_name') or new_name
+                    await _execute_payment(message, customer['id'], payer_name, new_name, pending['amount'], pending['method_raw'], pending['response_text'], loc, lang, processing_msg)
+                    PENDING_PAYMENTS.pop(message.from_user.id, None)
+                    return
+                elif ans in ['нет', 'no', 'voch', 'ոչ', '0', '-']:
+                    await message.answer(t("payment_pending", lang), parse_mode="Markdown")
+                    pending['state'] = 'need_id'
+                    return
+                else:
+                    await message.answer("Խնդրում ենք պատասխանել Այո կամ Ոչ (Yes/No):" if lang=='hy' else "Пожалуйста, ответьте Да или Нет (Yes/No):")
+                    return
+                    
+            elif state == 'select_multiple':
+                if text.strip().isdigit():
+                    idx = int(text.strip()) - 1
+                    candidates = pending['candidates']
+                    if 0 <= idx < len(candidates):
+                        customer = candidates[idx]
+                        customer_name = customer.get("name", "")
+                        customer_id = customer.get("id")
+                        
+                        is_valid_loc = False
+                        if check_crm_prefix(customer_name, loc['crm_prefix']):
+                            is_valid_loc = True
+                        else:
+                            valid_rooms = [v for v in loc["rooms"].values() if v is not None]
+                            is_valid_loc = await check_customer_rooms(customer_id, valid_rooms=valid_rooms)
+                            
+                        if not is_valid_loc:
+                            pending['state'] = 'confirm_prefix'
+                            pending['customer'] = customer
+                            ask_text = f"Ընտրված աշակերտը «{customer_name}» չունի «{loc['crm_prefix']}» պրեֆիքս: Սա՞ է ճիշտ աշակերտը: (Այո/Ոչ)" if lang=='hy' else f"Выбранный клиент «{customer_name}» не имеет префикса «{loc['crm_prefix']}». Это правильный клиент? (Да/Нет)"
+                            await message.answer(ask_text)
+                            return
+                        else:
+                            processing_msg = await message.answer(t("payment_processing", lang))
+                            payer_name = customer.get("legal_name") or customer_name
+                            await _execute_payment(message, customer_id, payer_name, customer_name, pending['amount'], pending['method_raw'], pending['response_text'], loc, lang, processing_msg)
+                            PENDING_PAYMENTS.pop(message.from_user.id, None)
+                            return
+                    else:
+                        await message.answer("Սխալ համար: Խնդրում ենք փորձել կրկին:" if lang=='hy' else "Неверный номер. Попробуйте еще раз:")
+                        return
+                else:
+                    await message.answer("Խնդրում ենք մուտքագրել համարը ցանկից:" if lang=='hy' else "Пожалуйста, введите номер из списка:")
+                    return
+            
             customer_id = extract_customer_id(text)
             if customer_id is not None:
-                pending = PENDING_PAYMENTS.pop(message.from_user.id)
-                
                 processing_msg = await message.answer(t("payment_processing", lang))
                 customer = await get_alfacrm_customer_by_id(customer_id)
                 if not customer:
                     await processing_msg.edit_text(t("payment_not_found", lang))
-                    PENDING_PAYMENTS[message.from_user.id] = pending
                     return
                     
                 payer_name = customer.get("legal_name") or customer.get("name", t("unknown", lang))
-                success = await create_alfacrm_payment(customer_id, pending['amount'], pending['method_raw'], payer_name, location_config=loc)
-                
-                if success:
-                    tz = zoneinfo.ZoneInfo("Asia/Yerevan")
-                    date_str = datetime.now(tz).strftime("%d.%m.%Y")
-                    student_name = customer.get("name", t("unknown", lang))
-                    await append_payment_to_sheet(date_str, student_name, pending['amount'], pending['method_raw'], tab_name=loc.get("sheets_tab"))
-                    await processing_msg.edit_text(t("payment_success", lang, name=student_name, text=pending['response_text']))
-                    if GROUP_CHAT_ID:
-                        try:
-                            chat_id_int = int(GROUP_CHAT_ID)
-                            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
-                            await bot.send_message(
-                                chat_id_int, pending['response_text'], message_thread_id=thread_id_int
-                            )
-                        except Exception as e:
-                            print(f"Failed to send to group: {e}")
-                else:
-                    await processing_msg.edit_text(t("payment_error", lang))
+                customer_name = customer.get("name", t("unknown", lang))
+                await _execute_payment(message, customer_id, payer_name, customer_name, pending['amount'], pending['method_raw'], pending['response_text'], loc, lang, processing_msg)
+                PENDING_PAYMENTS.pop(message.from_user.id, None)
                 return
             else:
                 await message.answer(t("payment_pending", lang), parse_mode="Markdown")
@@ -2399,17 +2515,42 @@ async def process_payment(message: types.Message):
     
     processing_msg = await message.answer(t("payment_searching", lang))
     
-    customer = await get_alfacrm_customer_by_name(name_russian, crm_prefix=loc["crm_prefix"])
+    customers = await get_alfacrm_customers_by_name(name_russian)
     
-    if not customer:
+    if not customers:
         await processing_msg.edit_text(t("payment_not_found", lang))
         PENDING_PAYMENTS[message.from_user.id] = {
             'amount': amount_int,
             'method_raw': payment_method_raw,
-            'response_text': response_text
+            'response_text': response_text,
+            'state': 'need_id'
         }
         return
         
+    if len(customers) > 1:
+        await processing_msg.delete()
+        def format_customer_row(index, c):
+            phones = c.get('phone', [])
+            phone_str = ""
+            if phones and isinstance(phones, list):
+                phone_str = f", Тел: {', '.join(str(p) for p in phones)}"
+            elif phones:
+                phone_str = f", Тел: {phones}"
+            return f"{index+1}. {c.get('name')} (ID: {c.get('id')}{phone_str})"
+
+        list_str = "\n".join([format_customer_row(i, c) for i, c in enumerate(customers)])
+        ask_text = f"Գտնվել են մի քանի աշակերտներ:\n{list_str}\n\nԸնտրեք համարը:" if lang=='hy' else f"Найдено несколько клиентов:\n{list_str}\n\nВыберите номер:"
+        await message.answer(ask_text)
+        PENDING_PAYMENTS[message.from_user.id] = {
+            'amount': amount_int,
+            'method_raw': payment_method_raw,
+            'response_text': response_text,
+            'state': 'select_multiple',
+            'candidates': customers
+        }
+        return
+        
+    customer = customers[0]
     customer_name = customer.get("name", "")
     customer_id = customer.get("id")
     
@@ -2421,33 +2562,20 @@ async def process_payment(message: types.Message):
         is_valid_loc = await check_customer_rooms(customer_id, valid_rooms=valid_rooms)
         
     if not is_valid_loc:
-        await processing_msg.edit_text(t("payment_wrong_loc", lang, name=customer_name, loc=loc['name']))
+        await processing_msg.delete()
+        ask_text = f"Գտնվել է «{customer_name}» աշակերտը, բայց նա չունի «{loc['crm_prefix']}» պրեֆիքս: Սա՞ է ճիշտ աշակերտը: (Այո/Ոչ)" if lang=='hy' else f"Найден клиент «{customer_name}», но он не имеет префикса «{loc['crm_prefix']}». Это правильный клиент? (Да/Нет)"
+        await message.answer(ask_text)
         PENDING_PAYMENTS[message.from_user.id] = {
             'amount': amount_int,
             'method_raw': payment_method_raw,
-            'response_text': response_text
+            'response_text': response_text,
+            'state': 'confirm_prefix',
+            'customer': customer
         }
         return
         
     payer_name = customer.get("legal_name") or customer_name
-    success = await create_alfacrm_payment(customer_id, amount_int, payment_method_raw, payer_name, location_config=loc)
-    
-    if success:
-        tz = zoneinfo.ZoneInfo("Asia/Yerevan")
-        date_str = datetime.now(tz).strftime("%d.%m.%Y")
-        await append_payment_to_sheet(date_str, customer_name, amount_int, payment_method_raw, tab_name=loc.get("sheets_tab"))
-        await processing_msg.edit_text(t("payment_success", lang, name=customer_name, text=response_text))
-        if GROUP_CHAT_ID:
-            try:
-                chat_id_int = int(GROUP_CHAT_ID)
-                thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
-                await bot.send_message(
-                    chat_id_int, response_text, message_thread_id=thread_id_int
-                )
-            except Exception as e:
-                print(f"Failed to send to group: {e}")
-    else:
-        await processing_msg.edit_text(t("payment_error", lang))
+    await _execute_payment(message, customer_id, payer_name, customer_name, amount_int, payment_method_raw, response_text, loc, lang, processing_msg)
 @app.post("/api/webhook")
 async def webhook(request: Request):
     print("Webhook endpoint triggered")

@@ -1,6 +1,8 @@
 import os
 import json
 import gspread_asyncio
+import gspread
+from google.auth.exceptions import GoogleAuthError
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 
@@ -107,6 +109,27 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
             value_input_option='USER_ENTERED'
         )
         return True, f"Success (row {next_row})"
+    except gspread.exceptions.WorksheetNotFound:
+        msg = f"Вкладка '{tab_name}' не найдена в таблице Google Sheets"
+        print(f"Sheets Error: {msg}")
+        return False, msg
+    except gspread.exceptions.SpreadsheetNotFound:
+        msg = f"Документ Google Sheets ({sheet_id}) не найден или у бота нет к нему доступа"
+        print(f"Sheets Error: {msg}")
+        return False, msg
+    except gspread.exceptions.APIError as e:
+        msg = f"Ошибка API Google Sheets (возможно, лимит запросов): {e}"
+        print(f"Sheets Error: {msg}")
+        return False, msg
+    except GoogleAuthError as e:
+        msg = f"Ошибка авторизации Google (Credentials): {e}"
+        print(f"Sheets Error: {msg}")
+        return False, msg
+    except ValueError as e:
+        msg = f"Ошибка конфигурации: {e}"
+        print(f"Sheets Error: {msg}")
+        return False, msg
     except Exception as e:
+        msg = f"Внутренняя ошибка при записи в ДДС: {str(e)}"
         print(f"Error appending to Google Sheets: {e}")
-        return False, str(e)
+        return False, msg
