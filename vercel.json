@@ -12,7 +12,7 @@
     },
     {
       "path": "/api/cron/remind-kassa",
-      "schedule": "30 17 * * *"
+      "schedule": "38 17 * * *"
     }
   ]
 }
