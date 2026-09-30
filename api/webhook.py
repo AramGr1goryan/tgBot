@@ -764,6 +764,10 @@ async def ensure_db():
                          (user_id BIGINT PRIMARY KEY)''')
             await conn.execute('''CREATE TABLE IF NOT EXISTS executors
                          (user_id BIGINT PRIMARY KEY, name TEXT)''')
+            try:
+                await conn.execute("ALTER TABLE executors ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'manager'")
+            except Exception as e:
+                pass
             await conn.execute('''CREATE TABLE IF NOT EXISTS all_users
                          (user_id BIGINT PRIMARY KEY, username TEXT, full_name TEXT)''')
             await conn.execute('''CREATE TABLE IF NOT EXISTS user_settings (
@@ -774,9 +778,10 @@ async def ensure_db():
             rows = await conn.fetch("SELECT user_id FROM banned_users")
             BANNED_USERS = {row['user_id'] for row in rows}
             
-            exec_rows = await conn.fetch("SELECT user_id, name FROM executors")
+            exec_rows = await conn.fetch("SELECT user_id, name, role FROM executors")
             for row in exec_rows:
                 EXECUTORS[row['user_id']] = row['name']
+                EXECUTOR_ROLES[row['user_id']] = row['role'] or 'manager'
                 
             known_rows = await conn.fetch("SELECT user_id FROM all_users")
             for row in known_rows:
