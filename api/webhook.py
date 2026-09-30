@@ -41,6 +41,7 @@ PAYMENT_METHODS = {
 db_initialized = False
 BANNED_USERS = set()
 EXECUTORS = {}
+EXECUTOR_ROLES = {}
 KNOWN_USERS = set()
 PENDING_PAYMENTS = {}
 USER_SETTINGS: dict = {}  # user_id → {"location": "GN", "language": "hy"}
@@ -1064,6 +1065,8 @@ async def process_name_registration(message: types.Message):
     await conn.close()
     
     EXECUTORS[message.from_user.id] = name
+    if message.from_user.id not in EXECUTOR_ROLES:
+        EXECUTOR_ROLES[message.from_user.id] = 'manager'
     await message.answer(t("start_success", lang, name=name))
 
 @dp.message(Command("getid"))
@@ -2432,6 +2435,53 @@ async def callback_confirm_prefix(callback: types.CallbackQuery):
         await callback.message.answer(t("payment_pending", lang), parse_mode="Markdown")
         pending['state'] = 'need_id'
 
+
+@dp.message(Command("setrole"))
+async def cmd_setrole(message: types.Message):
+    if message.from_user.id != 1472817960:
+        return
+    parts = message.text.split()
+    if len(parts) != 3:
+        await message.answer("Формат: /setrole <user_id> <role>")
+        return
+    try:
+        target_id = int(parts[1])
+    except:
+        await message.answer("Неверный user_id")
+        return
+        
+    role = parts[2]
+    await ensure_db()
+    
+    if target_id not in EXECUTORS:
+        await message.answer("Этот пользователь не зарегистрирован как менеджер.")
+        return
+        
+    conn = await asyncpg.connect(POSTGRES_URL)
+    try:
+        await conn.execute("UPDATE executors SET role = $1 WHERE user_id = $2", role, target_id)
+        EXECUTOR_ROLES[target_id] = role
+        await message.answer(f"Роль пользователя {EXECUTORS[target_id]} (ID: {target_id}) обновлена на '{role}'.")
+    except Exception as e:
+        await message.answer(f"Ошибка БД: {e}")
+    finally:
+        await conn.close()
+
+@dp.message(Command("roles"))
+async def cmd_roles(message: types.Message):
+    if message.from_user.id != 1472817960:
+        return
+    await ensure_db()
+    if not EXECUTORS:
+        await message.answer("Нет зарегистрированных пользователей.")
+        return
+        
+    lines = ["Список пользователей и ролей:"]
+    for uid, name in EXECUTORS.items():
+        role = EXECUTOR_ROLES.get(uid, 'manager')
+        lines.append(f"ID: <code>{uid}</code> | {name} | Роль: <b>{role}</b>")
+    await message.answer("\n".join(lines), parse_mode="HTML")
+
 @dp.message(Command("check"))
 async def cmd_check_kassa(message: types.Message):
     user_id = message.from_user.id
@@ -2806,6 +2856,8 @@ async def cron_remind_kassa():
         
     count = 0
     for user_id in EXECUTORS:
+        if EXECUTOR_ROLES.get(user_id) != 'admin':
+            continue
         try:
             lang = await get_user_language(user_id)
             loc = await get_user_location(user_id)
