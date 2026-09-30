@@ -2079,73 +2079,6 @@ async def cmd_testsheet(message: types.Message):
     except Exception as e:
         await message.answer(f"❌ Техническая ошибка:\n`{traceback.format_exc()}`", parse_mode="Markdown")
 
-@dp.message(Command("sendupdate"))
-async def cmd_sendupdate(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-        
-    await ensure_db()
-    lang = await get_user_language(message.from_user.id)
-    
-    text = (
-        "🚀 **Բոտի նոր գլոբալ թարմացում (V3.0)**\n\n"
-        "Ողջույն բոլորին: Մենք ուրախ ենք տեղեկացնել RobixLab բոտի V3 տարբերակի թողարկման մասին: Սա մեծ և կարևոր թարմացում է.\n\n"
-        "🌍 **Բազմամասնաճյուղային համակարգ (Multi-branch)**\n"
-        "Այժմ բոտը սպասարկում է բոլոր մասնաճյուղերը: Ավելացել է `/branch` հրամանը, որով կարող եք ընտրել ձեր մասնաճյուղը (Գ. Նժդեհ, Կոմիտաս կամ Սայաթ-Նովա): Վճարումները, առաջադրանքները (Task) և փորձնականները այժմ ավտոմատ կուղղվեն ձեր մասնաճյուղի Google աղյուսակ և Alfa CRM:\n\n"
-        "🇷🇺🇦🇲 **Ամբողջական երկլեզու ինտերֆեյս**\n"
-        "Բոտն այժմ ամբողջությամբ թարգմանված է հայերեն և ռուսերեն: Լեզուն փոխելու համար կարող եք օգտագործել `/language` հրամանը:\n\n"
-        "💳 **Խելացի վճարումների համակարգ**\n"
-        "• Վճարումների որոնումն այժմ ավելի ճշգրիտ է աշխատում (ճանաչում է `K.` և նման պրեֆիքսները):\n"
-        "• Եթե աշակերտի անունը անգլերենով եք գրում, բոտն այն ավտոմատ կթարգմանի կիրիլիցա:\n"
-        "• Վճարումները ավտոմատ մուտքագրվում են ճիշտ Google աղյուսակում («Оплаты Манташяна», «Оплаты Комитаса» և այլն)՝ կախված ընտրված մասնաճյուղից:\n\n"
-        "🆕 **Փորձնական դասերի նոր գործիքներ**\n"
-        "Ավելացել են նոր հրամաններ փորձնական դասերի գրանցման համար.\n"
-        "👉 `/addprob <հեռ.> <mk/lg> <օր.ամիս> <ժամ>` — Խմբային դասեր\n"
-        "👉 `/addprobk <հեռ.> <mk/lg> <օր.ամիս> <ժամ>` — Անհատական դասեր (Կոմիտաս)\n\n"
-        "🛠 **Այլ բարելավումներ**\n"
-        "• Բոտի աշխատանքը զգալիորեն արագացվել է, իսկ սխալների մշակումը կատարելագործվել է:\n"
-        "• Թարմացվել են `/about` և `/help` հրամանները նոր հրամանների ցանկով:\n\n"
-        "rus --- >\n\n"
-        "🚀 **Новое глобальное обновление бота! (V3.0)**\n\n"
-        "Всем привет! Мы рады сообщить о запуске версии V3 для нашего бота RobixLab. Это масштабное и важное обновление:\n\n"
-        "🌍 **Многофилиальная система (Multi-branch)**\n"
-        "Теперь бот поддерживает все наши филиалы! Добавлена команда `/branch` для выбора вашей локации (Г. Нжде, Комитас, Саят-Нова). Теперь платежи, задачи (Task) и пробные уроки автоматически направляются в правильную таблицу Google и Alfa CRM вашего филиала.\n\n"
-        "🇷🇺🇦🇲 **Полный двуязычный интерфейс**\n"
-        "Бот теперь 100% двуязычный (Армянский и Русский). Чтобы переключить язык, используйте команду `/language`.\n\n"
-        "💳 **Умная система платежей**\n"
-        "• Поиск учеников работает гораздо точнее (бот теперь понимает префиксы вроде `K.` и другие вариации).\n"
-        "• Если вы пишете имя ученика на латинице, бот сам транслитерирует его в кириллицу.\n"
-        "• Платежи автоматически попадают в правильный лист Google Sheets («Оплаты Манташяна», «Оплаты Комитаса» и т.д.) в зависимости от выбранной локации.\n\n"
-        "🆕 **Новые инструменты для пробных уроков**\n"
-        "Добавлены новые команды для быстрой записи на пробные уроки прямо из бота:\n"
-        "👉 `/addprob <телефон> <mk/lg> <день.месяц> <время>` — Групповые уроки\n"
-        "👉 `/addprobk <телефон> <mk/lg> <день.месяц> <время>` — Индивидуальные уроки (Комитас)\n\n"
-        "🛠 **Другие улучшения**\n"
-        "• Значительно ускорена работа бота и улучшена обработка ошибок.\n"
-        "• Обновлены команды `/about` и `/help`, где расписаны все новые функции."
-    )
-    
-    target_users = set(KNOWN_USERS).union(EXECUTORS.keys())
-    if POSTGRES_URL:
-        try:
-            conn = await asyncpg.connect(POSTGRES_URL, ssl='require')
-            rows = await conn.fetch("SELECT user_id FROM all_users UNION SELECT user_id FROM executors")
-            await conn.close()
-            for r in rows:
-                target_users.add(r['user_id'])
-        except Exception as e:
-            print(f"Failed to fetch users: {e}")
-            
-    success_count = 0
-    for u_id in target_users:
-        try:
-            await bot.send_message(u_id, text, parse_mode="Markdown")
-            success_count += 1
-        except Exception:
-            pass
-            
-    await message.answer(t("update_success", lang, count=success_count))
-
 @dp.message(Command("getusers"))
 async def cmd_getusers(message: types.Message):
     if message.from_user.id != ADMIN_ID:
@@ -2488,12 +2421,15 @@ async def cmd_roles(message: types.Message):
     await message.answer("\n".join(lines), parse_mode="HTML")
 
 
+
+PENDING_UPDATES = {}
+
 @dp.message(Command("sendupdate"))
 async def cmd_sendupdate(message: types.Message):
     if message.from_user.id != 1472817960:
         return
         
-    update_text = (
+    ru_text = (
         "🚀 <b>Масштабное обновление бота!</b>\n\n"
         "Мы добавили множество новых и крутых функций, чтобы сделать вашу работу проще:\n\n"
         "1️⃣ <b>Умные префиксы филиалов:</b> Если у клиента уже был чужой префикс, бот не будет их наслаивать! Он аккуратно уберет старый и поставит ваш.\n\n"
@@ -2504,17 +2440,61 @@ async def cmd_sendupdate(message: types.Message):
         "6️⃣ <b>Система ролей:</b> Добавлены роли (Менеджер / Админ). Напоминания о кассе будут приходить только тем, кому они действительно нужны.\n\n"
         "<i>Если заметите какие-либо проблемы, сразу сообщайте разработчику. Приятной работы!</i>"
     )
+    hy_text = (
+        "🚀 <b>Բոտի լայնածավալ թարմացում:</b>\n\n"
+        "Մենք ավելացրել ենք բազմաթիվ նոր և հիանալի գործառույթներ՝ ձեր աշխատանքը հեշտացնելու համար.\n\n"
+        "1️⃣ <b>Մասնաճյուղերի խելացի պրեֆիքսներ:</b> Եթե հաճախորդը արդեն ուներ այլ պրեֆիքս, բոտը չի կրկնապատկի դրանք: Այն զգուշորեն կհեռացնի հինը և կտեղադրի ձերը:\n\n"
+        "2️⃣ <b>Ինտերակտիվ կոճակներ:</b> Առանց պրեֆիքսի հաճախորդին հաստատելիս այժմ հայտնվում են հարմար կոճակներ (Այո/Ոչ) տեքստային պատասխանի փոխարեն:\n\n"
+        "3️⃣ <b>Հաճախորդների բարելավված որոնում:</b> Եթե գտնվել են մի քանի հաճախորդ նույն անունով, բոտը ցույց կտա նրանց ցանկը — բավական է պարզապես ուղարկել անհրաժեշտ համարը:\n\n"
+        "4️⃣ <b>Նոր հրաման <code>/check [գումար]</code>:</b> Այժմ դրամարկղը ստուգելիս բոտը ոչ միայն ասում է համընկնում է, թե ոչ, այլև <b>հաշվարկում է ճշգրիտ տարբերությունը</b> (որքանով է գումարը տարբերվում աղյուսակից):\n\n"
+        "5️⃣ <b>Ամենօրյա հիշեցումներ:</b> Բոտը սովորել է ինքնուրույն ամեն օր հիշեցնել ադմինիստրատորներին դրամարկղը ստուգելու անհրաժեշտության մասին:\n\n"
+        "6️⃣ <b>Դերերի համակարգ:</b> Ավելացվել են դերեր (Մենեջեր / Ադմին): Դրամարկղի մասին հիշեցումները կստանան միայն նրանք, ում դրանք իսկապես պետք են:\n\n"
+        "<i>Եթե նկատեք որևէ խնդիր, անմիջապես տեղեկացրեք ծրագրավորողին: Բարի աշխատանք:</i>"
+    )
     
+    PENDING_UPDATES[message.from_user.id] = {"ru": ru_text, "hy": hy_text}
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Отправить всем", callback_data="broadcast_yes"),
+            InlineKeyboardButton(text="❌ Отмена", callback_data="broadcast_no")
+        ]
+    ])
+    
+    preview_msg = "<b>Вот так выглядит текст (Русский):</b>\n\n" + ru_text + "\n\n<b>Вот так выглядит текст (Армянский):</b>\n\n" + hy_text + "\n\n<i>Отправить это сообщение всем пользователям?</i>"
+    await message.answer(preview_msg, parse_mode="HTML", reply_markup=keyboard)
+
+@dp.callback_query(F.data.in_({"broadcast_yes", "broadcast_no"}))
+async def callback_broadcast(callback: types.CallbackQuery):
+    if callback.from_user.id != 1472817960:
+        return
+        
+    ans = callback.data.split("_")[1]
+    if ans == "no":
+        await callback.message.edit_text("❌ Рассылка отменена.")
+        PENDING_UPDATES.pop(callback.from_user.id, None)
+        return
+        
+    data = PENDING_UPDATES.get(callback.from_user.id)
+    if not data:
+        await callback.message.edit_text("❌ Сессия устарела.")
+        return
+        
+    await callback.message.edit_text("✅ Рассылка запущена...")
     await ensure_db()
     count = 0
     for uid in EXECUTORS:
         try:
-            await bot.send_message(uid, update_text, parse_mode="HTML")
+            lang = await get_user_language(uid)
+            text = data["hy"] if lang == "hy" else data["ru"]
+            await bot.send_message(uid, text, parse_mode="HTML")
             count += 1
         except Exception as e:
             print(f"Failed to send update to {uid}: {e}")
             
-    await message.answer(f"✅ Уведомление об обновлении успешно разослано {count} пользователям!")
+    await callback.message.reply(f"✅ Уведомление об обновлении успешно разослано {count} пользователям!")
+    PENDING_UPDATES.pop(callback.from_user.id, None)
+
 
 @dp.message(Command("check"))
 async def cmd_check_kassa(message: types.Message):
