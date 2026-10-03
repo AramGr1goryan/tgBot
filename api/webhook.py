@@ -742,6 +742,7 @@ async def delete_alfacrm_payment(pay_id: str) -> tuple[bool, str]:
     
     async with httpx.AsyncClient() as client:
         try:
+            # Сначала пробуем /pay/delete
             response = await client.post(
                 "https://robixlab.s20.online/v2api/1/pay/delete",
                 headers=headers,
@@ -750,6 +751,22 @@ async def delete_alfacrm_payment(pay_id: str) -> tuple[bool, str]:
             )
             if response.status_code == 200:
                 return True, ""
+            
+            # Если 404, пробуем /pay/update и обнуляем сумму
+            update_payload = {
+                "id": int(pay_id),
+                "income": 0,
+                "note": "Удален (отмена)"
+            }
+            res_update = await client.post(
+                "https://robixlab.s20.online/v2api/1/pay/update",
+                headers=headers,
+                json=update_payload,
+                timeout=10.0
+            )
+            if res_update.status_code == 200:
+                return True, "обнулен через update"
+            
             return False, f"HTTP {response.status_code} {response.text[:200]}"
         except Exception as e:
             return False, str(e)
@@ -2506,42 +2523,46 @@ async def cmd_undo(message: types.Message):
         return
         
     success, err = await delete_alfacrm_payment(pay_id)
+    
+    text = ""
     if success:
-        text = f"✅ Платеж ({last_pay['amount']} AMD для {last_pay['name']}) успешно удален из Alfa CRM."
+        text = f"✅ Платеж ({last_pay['amount']} AMD для {last_pay['name']}) успешно удален/обнулен из Alfa CRM."
         if lang == 'hy':
-            text = f"✅ Վճարումը ({last_pay['amount']} AMD {last_pay['name']}-ի համար) հաջողությամբ ջնջվել է Alfa CRM-ից:"
-            
-        sheet_row = last_pay.get("sheet_row")
-        tab_name = last_pay.get("tab_name")
-        if sheet_row:
-            from api.sheets import update_payment_in_sheet_to_zero
-            sheet_ok, sheet_msg = await update_payment_in_sheet_to_zero(sheet_row, tab_name)
-            if sheet_ok:
-                text += "\n✅ В Google-таблице (ДДС) платеж обнулен." if lang != 'hy' else "\n✅ ԴԴՍ Google-աղյուսակում վճարումը զրոյացվել է:"
-            else:
-                text += f"\n⚠️ Ошибка обнуления в ДДС (нужно вручную): {sheet_msg}" if lang != 'hy' else f"\n⚠️ ԴԴՍ աղյուսակում զրոյացման սխալ (ջնջեք ձեռքով): {sheet_msg}"
-        else:
-            text += "\n⚠️ В Google-таблице (ДДС) платеж нужно удалить ВРУЧНУЮ!" if lang != 'hy' else "\n⚠️ ԴԴՍ Google-աղյուսակից վճարումը պետք է ջնջել ՁԵՌՔՈՎ:"
-            
-        await message.answer(text)
-        
-        if GROUP_CHAT_ID:
-            try:
-                executor_name = message.from_user.full_name
-                chat_id_int = int(GROUP_CHAT_ID)
-                thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
-                group_msg = f"🗑 **Отмена платежа**\n{executor_name} отменил(а) платеж:\n{last_pay['name']} | {last_pay['amount']}"
-                await message.bot.send_message(
-                    chat_id_int, 
-                    group_msg,
-                    message_thread_id=thread_id_int
-                )
-            except Exception as e:
-                print(f"Failed to send undo to group: {e}")
-                
-        del LAST_PAYMENTS[user_id]
+            text = f"✅ Վճարումը ({last_pay['amount']} AMD {last_pay['name']}-ի համար) հաջողությամբ ջնջվել/զրոյացվել է Alfa CRM-ից:"
     else:
-        await message.answer(f"❌ Ошибка удаления (Սխալ): {err}")
+        text = f"⚠️ Ошибка удаления из Alfa CRM (удалите ВРУЧНУЮ!): {err}"
+        if lang == 'hy':
+            text = f"⚠️ Alfa CRM-ից ջնջելու սխալ (ջնջեք ՁԵՌՔՈՎ): {err}"
+            
+    sheet_row = last_pay.get("sheet_row")
+    tab_name = last_pay.get("tab_name")
+    if sheet_row:
+        from api.sheets import update_payment_in_sheet_to_zero
+        sheet_ok, sheet_msg = await update_payment_in_sheet_to_zero(sheet_row, tab_name)
+        if sheet_ok:
+            text += "\n✅ В Google-таблице (ДДС) платеж обнулен." if lang != 'hy' else "\n✅ ԴԴՍ Google-աղյուսակում վճարումը զրոյացվել է:"
+        else:
+            text += f"\n⚠️ Ошибка обнуления в ДДС (нужно вручную): {sheet_msg}" if lang != 'hy' else f"\n⚠️ ԴԴՍ աղյուսակում զրոյացման սխալ (ջնջեք ձեռքով): {sheet_msg}"
+    else:
+        text += "\n⚠️ В Google-таблице (ДДС) платеж нужно удалить ВРУЧНУЮ!" if lang != 'hy' else "\n⚠️ ԴԴՍ Google-աղյուսակից վճարումը պետք է ջնջել ՁԵՌՔՈՎ:"
+        
+    await message.answer(text)
+    
+    if GROUP_CHAT_ID:
+        try:
+            executor_name = EXECUTORS.get(user_id, message.from_user.full_name)
+            chat_id_int = int(GROUP_CHAT_ID)
+            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+            group_msg = f"🗑 **Отмена платежа**\n{executor_name} отменил(а) платеж:\n{last_pay['name']} | {last_pay['amount']}"
+            await message.bot.send_message(
+                chat_id_int, 
+                group_msg,
+                message_thread_id=thread_id_int
+            )
+        except Exception as e:
+            print(f"Failed to send undo to group: {e}")
+            
+    del LAST_PAYMENTS[user_id]
 
 
 
