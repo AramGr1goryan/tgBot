@@ -44,6 +44,7 @@ EXECUTORS = {}
 EXECUTOR_ROLES = {}
 KNOWN_USERS = set()
 PENDING_PAYMENTS = {}
+LAST_PAYMENTS = {}
 USER_SETTINGS: dict = {}  # user_id → {"location": "GN", "language": "hy"}
 
 PROB_SCHEDULE = {
@@ -199,14 +200,41 @@ def _parse_lessons(items, tz):
         })
     return booked_slots
 
+def normalize_homoglyphs(text: str) -> str:
+    if not text: return text
+    homoglyphs = {
+        'А': 'A', 'а': 'a',
+        'В': 'B', 'в': 'b', 
+        'С': 'C', 'с': 'c',
+        'Е': 'E', 'е': 'e',
+        'Н': 'H', 'н': 'h',
+        'К': 'K', 'к': 'k',
+        'М': 'M', 'м': 'm',
+        'О': 'O', 'о': 'o',
+        'Р': 'P', 'р': 'p',
+        'Т': 'T', 'т': 't',
+        'Х': 'X', 'х': 'x',
+        'У': 'Y', 'у': 'y'
+    }
+    res = []
+    for ch in text:
+        res.append(homoglyphs.get(ch, ch))
+    return "".join(res)
+
+def fix_layout(text: str) -> str:
+    en_to_ru = str.maketrans(
+        "qwertyuiop[]asdfghjkl;'zxcvbnm,./QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?",
+        "йцукенгшщзхъфывапролджэячсмитьбю.ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,"
+    )
+    return text.translate(en_to_ru)
+
 def check_crm_prefix(name: str, prefix: str) -> bool:
     if not name or not prefix: return False
-    n = name.upper()
-    p = prefix.upper()
-    return (n.startswith(f"{p} |") or 
-            n.startswith(f"{p}|") or 
-            n.startswith(f"{p}. |") or 
-            n.startswith(f"{p}.|"))
+    n = normalize_homoglyphs(name.upper())
+    p = normalize_homoglyphs(prefix.upper())
+    import re
+    pattern = r"^" + re.escape(p) + r"\.?\s*\|"
+    return bool(re.match(pattern, n))
 async def get_alfacrm_customers_by_name(name: str):
     """Search CRM customers by name and return a list of matches."""
     token = await get_alfacrm_token()
@@ -220,10 +248,13 @@ async def get_alfacrm_customers_by_name(name: str):
     
     clean_name = name.strip()
     rus_name = transliterate_name(clean_name)
+    fixed_layout_name = fix_layout(clean_name)
+    fixed_layout_rus = transliterate_name(fixed_layout_name)
     
-    search_names = [clean_name]
-    if rus_name.lower() != clean_name.lower():
-        search_names.append(rus_name)
+    search_names = []
+    for n in [clean_name, rus_name, fixed_layout_name, fixed_layout_rus]:
+        if n and n.lower() not in [x.lower() for x in search_names]:
+            search_names.append(n)
         
     client = get_http_client()
     found_customers = []
@@ -674,7 +705,9 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
                 timeout=10.0
             )
             if response.status_code == 200:
-                return True, ""
+                data = response.json()
+                pay_id = data.get("model", {}).get("id", "")
+                return True, str(pay_id)
             else:
                 error_msg = f"HTTP {response.status_code}"
                 try:
@@ -696,6 +729,30 @@ async def create_alfacrm_payment(customer_id: int, amount: int, method_raw: str,
             print(f"Error creating payment: {e}")
             return False, f"Network/Internal Error: {str(e)}"
     return False, "Unknown Error"
+
+async def delete_alfacrm_payment(pay_id: str) -> tuple[bool, str]:
+    token = await get_alfacrm_token()
+    if not token: return False, "Token error"
+    
+    headers = {
+        "X-ALFACRM-TOKEN": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                "https://robixlab.s20.online/v2api/1/pay/delete",
+                headers=headers,
+                json={"id": int(pay_id)},
+                timeout=10.0
+            )
+            if response.status_code == 200:
+                return True, ""
+            return False, f"HTTP {response.status_code} {response.text[:200]}"
+        except Exception as e:
+            return False, str(e)
 
 async def _fetch_status(client, headers, date_from, date_to, status_val):
     items = []
@@ -2377,7 +2434,12 @@ async def update_alfacrm_customer_name(customer_id: int, new_name: str):
         return False
 
 async def _execute_payment(message, customer_id, payer_name, customer_name, amount_int, payment_method_raw, response_text, loc, lang, processing_msg=None):
-    success, error_msg = await create_alfacrm_payment(customer_id, amount_int, payment_method_raw, payer_name, location_config=loc)
+    executor_name = message.from_user.full_name
+    payment_method = PAYMENT_METHODS.get(payment_method_raw, payment_method_raw)
+    
+    response_text = f"Платеж обработал(а): {executor_name}\n{customer_name} | {amount_int} | {payment_method}"
+    
+    success, error_msg_or_id = await create_alfacrm_payment(customer_id, amount_int, payment_method_raw, payer_name, location_config=loc)
     
     if success:
         import zoneinfo
@@ -2386,6 +2448,22 @@ async def _execute_payment(message, customer_id, payer_name, customer_name, amou
         date_str = datetime.now(tz).strftime("%d.%m.%Y")
         
         sheet_success, sheet_err = await append_payment_to_sheet(date_str, customer_name, amount_int, payment_method_raw, tab_name=loc.get("sheets_tab"))
+        
+        row_idx = None
+        if sheet_success:
+            import re
+            row_match = re.search(r"row (\d+)", sheet_err)
+            if row_match:
+                row_idx = int(row_match.group(1))
+                
+        LAST_PAYMENTS[message.chat.id] = {
+            "pay_id": error_msg_or_id, 
+            "amount": amount_int, 
+            "name": customer_name,
+            "sheet_row": row_idx,
+            "tab_name": loc.get("sheets_tab")
+        }
+        
         if not sheet_success:
             response_text += f"\n\n⚠️ **Ուշադրություն (Внимание):** Alfa CRM-ում գրանցվել է, բայց ԴԴՍ աղյուսակում ավելացնելիս առաջացավ սխալ: Ստուգեք աղյուսակը:\nՊատճառ՝ {sheet_err}"
             
@@ -2405,9 +2483,66 @@ async def _execute_payment(message, customer_id, payer_name, customer_name, amou
                 print(f"Failed to send to group: {e}")
     else:
         if processing_msg:
-            await processing_msg.edit_text(t("payment_error", lang, msg=error_msg))
+            await processing_msg.edit_text(t("payment_error", lang, msg=error_msg_or_id))
         else:
-            await message.answer(t("payment_error", lang, msg=error_msg))
+            await message.answer(t("payment_error", lang, msg=error_msg_or_id))
+
+
+@dp.message(Command("undo"))
+async def cmd_undo(message: types.Message):
+    user_id = message.from_user.id
+    if user_id not in KNOWN_USERS and user_id != ADMIN_ID:
+        return
+        
+    lang = await get_user_language(user_id)
+    if user_id not in LAST_PAYMENTS:
+        await message.answer("Нет платежа для отмены (или он уже был отменен)." if lang != 'hy' else "Չկա վճարում չեղարկելու համար (կամ արդեն չեղարկվել է):")
+        return
+        
+    last_pay = LAST_PAYMENTS[user_id]
+    pay_id = last_pay.get("pay_id")
+    if not pay_id:
+        await message.answer("Ошибка: ID платежа не найден." if lang != 'hy' else "Սխալ՝ վճարման ID-ն չի գտնվել:")
+        return
+        
+    success, err = await delete_alfacrm_payment(pay_id)
+    if success:
+        text = f"✅ Платеж ({last_pay['amount']} AMD для {last_pay['name']}) успешно удален из Alfa CRM."
+        if lang == 'hy':
+            text = f"✅ Վճարումը ({last_pay['amount']} AMD {last_pay['name']}-ի համար) հաջողությամբ ջնջվել է Alfa CRM-ից:"
+            
+        sheet_row = last_pay.get("sheet_row")
+        tab_name = last_pay.get("tab_name")
+        if sheet_row:
+            from api.sheets import update_payment_in_sheet_to_zero
+            sheet_ok, sheet_msg = await update_payment_in_sheet_to_zero(sheet_row, tab_name)
+            if sheet_ok:
+                text += "\n✅ В Google-таблице (ДДС) платеж обнулен." if lang != 'hy' else "\n✅ ԴԴՍ Google-աղյուսակում վճարումը զրոյացվել է:"
+            else:
+                text += f"\n⚠️ Ошибка обнуления в ДДС (нужно вручную): {sheet_msg}" if lang != 'hy' else f"\n⚠️ ԴԴՍ աղյուսակում զրոյացման սխալ (ջնջեք ձեռքով): {sheet_msg}"
+        else:
+            text += "\n⚠️ В Google-таблице (ДДС) платеж нужно удалить ВРУЧНУЮ!" if lang != 'hy' else "\n⚠️ ԴԴՍ Google-աղյուսակից վճարումը պետք է ջնջել ՁԵՌՔՈՎ:"
+            
+        await message.answer(text)
+        
+        if GROUP_CHAT_ID:
+            try:
+                executor_name = message.from_user.full_name
+                chat_id_int = int(GROUP_CHAT_ID)
+                thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+                group_msg = f"🗑 **Отмена платежа**\n{executor_name} отменил(а) платеж:\n{last_pay['name']} | {last_pay['amount']}"
+                await message.bot.send_message(
+                    chat_id_int, 
+                    group_msg,
+                    message_thread_id=thread_id_int
+                )
+            except Exception as e:
+                print(f"Failed to send undo to group: {e}")
+                
+        del LAST_PAYMENTS[user_id]
+    else:
+        await message.answer(f"❌ Ошибка удаления (Սխալ): {err}")
+
 
 
 @dp.callback_query(F.data.startswith("confirm_prefix_"))

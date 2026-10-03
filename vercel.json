@@ -9,10 +9,6 @@
     {
       "path": "/api/cron/remind-kassa",
       "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/remind-kassa",
-      "schedule": "38 17 * * *"
     }
   ]
 }

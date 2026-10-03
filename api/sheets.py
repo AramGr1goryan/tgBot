@@ -172,6 +172,33 @@ async def get_last_h_value(tab_name: str):
     except Exception as e:
         return False, f"Unexpected error: {str(e)}"
 
+async def update_payment_in_sheet_to_zero(row_index: int, tab_name: str = None):
+    sheet_id = os.environ.get("GOOGLE_SHEET_ID")
+    if not tab_name:
+        tab_name = os.environ.get("GOOGLE_SHEET_TAB_NAME", "Оплаты Манташяна")
+    
+    if not sheet_id:
+        return False, "GOOGLE_SHEET_ID is not configured"
+        
+    try:
+        client = await agcm.authorize()
+        spreadsheet = await client.open_by_key(sheet_id)
+        worksheet = await spreadsheet.worksheet(tab_name)
+        
+        await worksheet.update(
+            values=[[0]],
+            range_name=f"F{row_index}:F{row_index}",
+            value_input_option='USER_ENTERED'
+        )
+        await worksheet.update(
+            values=[[0]],
+            range_name=f"I{row_index}:I{row_index}",
+            value_input_option='USER_ENTERED'
+        )
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+
 
 async def append_expense_to_sheet(date_str: str, reason: str, amount: int, tab_name: str = None):
     sheet_id = os.environ.get("GOOGLE_SHEET_ID")
