@@ -767,7 +767,12 @@ async def delete_alfacrm_payment(pay_id: str) -> tuple[bool, str]:
             if res_update.status_code == 200:
                 return True, "обнулен через update"
             
-            return False, f"HTTP {response.status_code} {response.text[:200]}"
+            try:
+                err_msg = str(res_update.json())
+            except:
+                err_msg = res_update.text[:200].strip()
+            
+            return False, f"HTTP {res_update.status_code} {err_msg}"
         except Exception as e:
             return False, str(e)
 
