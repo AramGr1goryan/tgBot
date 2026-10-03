@@ -752,11 +752,10 @@ async def delete_alfacrm_payment(pay_id: str) -> tuple[bool, str]:
             if response.status_code == 200:
                 return True, ""
             
-            # Если 404, пробуем /pay/update и обнуляем сумму
+            # Если 404, пробуем обновить примечание (note), чтобы админы видели в CRM
             update_payload = {
                 "id": int(pay_id),
-                "income": 0,
-                "note": "Удален (отмена)"
+                "note": "❌ ОТМЕНЕН ЧЕРЕЗ БОТА (УДАЛИТЕ ВРУЧНУЮ)"
             }
             res_update = await client.post(
                 f"https://robixlab.s20.online/v2api/1/pay/update?id={pay_id}",
@@ -764,15 +763,10 @@ async def delete_alfacrm_payment(pay_id: str) -> tuple[bool, str]:
                 json=update_payload,
                 timeout=10.0
             )
-            if res_update.status_code == 200:
-                return True, "обнулен через update"
             
-            try:
-                err_msg = str(res_update.json())
-            except:
-                err_msg = res_update.text[:200].strip()
-            
-            return False, f"HTTP {res_update.status_code} {err_msg}"
+            # В любом случае возвращаем False, чтобы бот предупредил пользователя,
+            # что из CRM платеж не удален, а только помечен.
+            return False, "Alfa CRM API не поддерживает удаление платежа. В CRM добавлена пометка (❌), удалите платеж вручную!"
         except Exception as e:
             return False, str(e)
 
