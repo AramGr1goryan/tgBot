@@ -759,7 +759,7 @@ async def delete_alfacrm_payment(pay_id: str) -> tuple[bool, str]:
                 "note": "Удален (отмена)"
             }
             res_update = await client.post(
-                "https://robixlab.s20.online/v2api/1/pay/update",
+                f"https://robixlab.s20.online/v2api/1/pay/update?id={pay_id}",
                 headers=headers,
                 json=update_payload,
                 timeout=10.0
@@ -2456,7 +2456,7 @@ async def update_alfacrm_customer_name(customer_id: int, new_name: str):
         return False
 
 async def _execute_payment(message, customer_id, payer_name, customer_name, amount_int, payment_method_raw, response_text, loc, lang, processing_msg=None):
-    executor_name = message.from_user.full_name
+    executor_name = EXECUTORS.get(message.chat.id, message.from_user.full_name)
     payment_method = PAYMENT_METHODS.get(payment_method_raw, payment_method_raw)
     
     response_text = f"Платеж обработал(а): {executor_name}\n{customer_name} | {amount_int} | {payment_method}"
