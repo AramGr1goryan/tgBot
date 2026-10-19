@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import asyncio
 import zoneinfo
 import httpx
+import html
 from api.sheets import append_payment_to_sheet, get_last_h_value
 from api.locations import LOCATIONS, get_location, resolve_alias, DEFAULT_LOCATION
 from api.i18n import t
@@ -46,6 +47,12 @@ KNOWN_USERS = set()
 PENDING_PAYMENTS = {}
 LAST_PAYMENTS = {}
 USER_SETTINGS: dict = {}  # user_id → {"location": "GN", "language": "hy"}
+
+def safe_md(text) -> str:
+    """Escapes Markdown special characters to prevent TelegramBadRequest parse errors."""
+    if text is None:
+        return ""
+    return re.sub(r'([_*\[\]()~`>#+\-=|{}.!\\])', r'\\\1', str(text))
 
 PROB_SCHEDULE = {
     0: ("Երկուշաբթի", "• 15:00 — Lego (6 աշակերտ) կամ Makeblock (3 աշակերտ)\n• 17:00 — Lego (2 աշակերտ)\n• 18:30 — Lego (3 աշակերտ)"),
@@ -1305,11 +1312,14 @@ async def cmd_kchecktasks(message: types.Message):
     builder  = InlineKeyboardBuilder()
     for task in tasks:
         t_id   = task['id']
-        t_desc = task['description']
+        t_desc = safe_md(task['description'])
         response += f"🔹 **Task{t_id}** - {t_desc}\n"
         builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_K_{t_id}")
     builder.adjust(2)
-    await message.answer(response, parse_mode="Markdown", reply_markup=builder.as_markup())
+    try:
+        await message.answer(response, parse_mode="Markdown", reply_markup=builder.as_markup())
+    except Exception:
+        await message.answer(response.replace("**", ""), reply_markup=builder.as_markup())
 
 import json
 
@@ -1831,7 +1841,10 @@ async def cmd_addtask(message: types.Message):
     await message.answer(t("task_added", lang, loc=loc["name"]))
 
     user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-    task_msg = t("task_added_push", lang, loc=loc["name"], user=user_info, desc=task_description)
+    safe_loc_name = safe_md(loc["name"])
+    safe_user = safe_md(user_info)
+    safe_task_desc = safe_md(task_description)
+    task_msg = t("task_added_push", lang, loc=safe_loc_name, user=safe_user, desc=safe_task_desc)
 
     # Get all users who use the bot (from Postgres & memory) to send them private notification
     target_users = set(KNOWN_USERS).union(EXECUTORS.keys())
@@ -1848,8 +1861,11 @@ async def cmd_addtask(message: types.Message):
     for u_id in target_users:
         try:
             await bot.send_message(u_id, task_msg, parse_mode="Markdown")
-        except Exception as e:
-            print(f"Failed to send task notification to user {u_id}: {e}")
+        except Exception:
+            try:
+                await bot.send_message(u_id, task_msg.replace("**", ""))
+            except Exception as e:
+                print(f"Failed to send task notification to user {u_id}: {e}")
 
 @dp.message(Command("checktasks"))
 async def cmd_checktasks(message: types.Message):
@@ -1870,12 +1886,15 @@ async def cmd_checktasks(message: types.Message):
     
     for task in tasks:
         t_id = task['id']
-        t_desc = task['description']
+        t_desc = safe_md(task['description'])
         response += f"🔹 **Task{t_id}** - {t_desc}\n"
         builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_{loc['code']}_{t_id}")
     builder.adjust(2)
         
-    await message.answer(response, parse_mode="Markdown", reply_markup=builder.as_markup())
+    try:
+        await message.answer(response, parse_mode="Markdown", reply_markup=builder.as_markup())
+    except Exception:
+        await message.answer(response.replace("**", ""), reply_markup=builder.as_markup())
 
 @dp.callback_query(F.data.startswith("complete_"))
 async def callback_complete_task(callback: types.CallbackQuery):
@@ -1898,14 +1917,19 @@ async def callback_complete_task(callback: types.CallbackQuery):
         await callback.answer(t("task_done_cb", lang, n=task_id))
         user_info = f"@{callback.from_user.username}" if callback.from_user.username else callback.from_user.full_name
         
-        notify_text = t("task_done_push", lang, user=user_info, n=task_id, desc=task_desc)
+        safe_task_desc = safe_md(task_desc)
+        safe_user = safe_md(user_info)
+        notify_text = t("task_done_push", lang, user=safe_user, n=task_id, desc=safe_task_desc)
         
         # Send completion notifications ONLY to Lusine (6062763343), Hripsime (5636022981), and Aram (1472817960)
         for u_id in TASK_NOTIFY_USERS:
             try:
                 await bot.send_message(u_id, notify_text, parse_mode="Markdown")
-            except Exception as e:
-                print(f"Failed to send task completion notification to {u_id}: {e}")
+            except Exception:
+                try:
+                    await bot.send_message(u_id, notify_text.replace("**", ""))
+                except Exception as e:
+                    print(f"Failed to send task completion notification to {u_id}: {e}")
                 
     tasks = await get_tasks(location=cb_location)
     if not tasks:
@@ -1918,12 +1942,15 @@ async def callback_complete_task(callback: types.CallbackQuery):
     
     for task in tasks:
         t_id = task['id']
-        t_desc = task['description']
+        t_desc = safe_md(task['description'])
         response += f"🔹 **Task{t_id}** - {t_desc}\n"
         builder.button(text=f"✅ Task{t_id}", callback_data=f"complete_{cb_location}_{t_id}")
     builder.adjust(2)
         
-    await callback.message.edit_text(response, parse_mode="Markdown", reply_markup=builder.as_markup())
+    try:
+        await callback.message.edit_text(response, parse_mode="Markdown", reply_markup=builder.as_markup())
+    except Exception:
+        await callback.message.edit_text(response.replace("**", ""), reply_markup=builder.as_markup())
 
 @dp.message(F.text.regexp(r'(?i)^/task(\d+)$'))
 async def cmd_complete_task_number(message: types.Message):
@@ -1939,17 +1966,25 @@ async def cmd_complete_task_number(message: types.Message):
         await message.answer(t("task_not_found_cmd", lang, n=task_id))
         return
         
-    await message.answer(t("task_done_cmd", lang, n=task_id, desc=task_desc))
+    safe_task_desc = safe_md(task_desc)
+    try:
+        await message.answer(t("task_done_cmd", lang, n=task_id, desc=safe_task_desc), parse_mode="Markdown")
+    except Exception:
+        await message.answer(t("task_done_cmd", lang, n=task_id, desc=task_desc))
     
     user_info = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-    notify_text = t("task_done_push", lang, user=user_info, n=task_id, desc=task_desc)
+    safe_user = safe_md(user_info)
+    notify_text = t("task_done_push", lang, user=safe_user, n=task_id, desc=safe_task_desc)
     
     # Send completion notifications ONLY to Lusine (6062763343), Hripsime (5636022981), and Aram (1472817960)
     for u_id in TASK_NOTIFY_USERS:
         try:
             await bot.send_message(u_id, notify_text, parse_mode="Markdown")
-        except Exception as e:
-            print(f"Failed to send task completion notification to {u_id}: {e}")
+        except Exception:
+            try:
+                await bot.send_message(u_id, notify_text.replace("**", ""))
+            except Exception as e:
+                print(f"Failed to send task completion notification to {u_id}: {e}")
 
 @dp.message(Command("task"))
 async def cmd_task_hint(message: types.Message):
