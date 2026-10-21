@@ -116,7 +116,11 @@ _http_client = None
 def get_http_client() -> httpx.AsyncClient:
     global _http_client
     if _http_client is None or _http_client.is_closed:
-        _http_client = httpx.AsyncClient(timeout=8.0)
+        _http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(10.0, connect=4.0, read=8.0),
+            limits=httpx.Limits(max_keepalive_connections=5, keepalive_expiry=5.0),
+            headers={"User-Agent": "Mozilla/5.0 (compatible; RobixBot/1.0)"}
+        )
     return _http_client
 
 async def get_db_pool():
@@ -134,29 +138,57 @@ async def get_db_pool():
 _alfacrm_token = None
 _alfacrm_token_expires = 0
 
-async def get_alfacrm_token():
+def invalidate_alfacrm_token():
     global _alfacrm_token, _alfacrm_token_expires
+    _alfacrm_token = None
+    _alfacrm_token_expires = 0
+
+async def get_alfacrm_token(force_refresh: bool = False):
+    global _alfacrm_token, _alfacrm_token_expires, _http_client
     now = datetime.now().timestamp()
-    if _alfacrm_token and now < _alfacrm_token_expires:
+    if not force_refresh and _alfacrm_token and now < _alfacrm_token_expires:
         return _alfacrm_token
-        
-    client = get_http_client()
-    try:
-        resp = await client.post(
-            "https://robixlab.s20.online/v2api/auth/login",
-            json={"email": ALFACRM_EMAIL, "api_key": ALFACRM_API_KEY}
-        )
-        if resp.status_code != 200:
-            print(f"ALFACRM AUTH ERROR: {resp.status_code} {resp.text}")
-            return None
-            
-        data = resp.json()
-        _alfacrm_token = data.get("token")
-        _alfacrm_token_expires = now + 7200 # 2 hours
-        return _alfacrm_token
-    except Exception as e:
-        print(f"ALFACRM AUTH EXCEPTION: {e}")
+
+    if not ALFACRM_EMAIL or not ALFACRM_API_KEY:
+        print("ALFACRM AUTH ERROR: ALFACRM_EMAIL or ALFACRM_API_KEY is not configured in environment variables")
         return None
+
+    for attempt in range(1, 3):
+        try:
+            client = get_http_client()
+            resp = await client.post(
+                "https://robixlab.s20.online/v2api/auth/login",
+                json={"email": ALFACRM_EMAIL, "api_key": ALFACRM_API_KEY},
+                headers={"Content-Type": "application/json"},
+                timeout=httpx.Timeout(5.0, connect=2.5, read=4.0)
+            )
+            if resp.status_code != 200:
+                print(f"ALFACRM AUTH ERROR: status {resp.status_code} - {resp.text}")
+                return None
+
+            data = resp.json()
+            token = data.get("token")
+            if not token:
+                print(f"ALFACRM AUTH ERROR: Token missing in response: {data}")
+                return None
+
+            _alfacrm_token = token
+            _alfacrm_token_expires = now + 7200 # 2 hours
+            return _alfacrm_token
+        except Exception as e:
+            err_name = type(e).__name__
+            print(f"ALFACRM AUTH EXCEPTION (attempt {attempt}/2): {err_name}: {repr(e)}")
+            # Reset client to drop stale or broken connection pool (e.g. after serverless freeze/thaw)
+            if _http_client is not None:
+                try:
+                    await _http_client.aclose()
+                except Exception:
+                    pass
+                _http_client = None
+            if attempt < 2:
+                await asyncio.sleep(0.3)
+
+    return None
 
 def _parse_lessons(items, tz):
     now = datetime.now(tz)
