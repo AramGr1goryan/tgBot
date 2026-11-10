@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 import gspread_asyncio
 import gspread
 from google.auth.exceptions import GoogleAuthError
@@ -55,7 +56,7 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
             pass
             
         cash_income = amount if method_raw == 'n' else ""
-        cashless_income = amount if method_raw in ['b.n', 'c'] else ""
+        cashless_income = amount if method_raw == 'b.n' else ""
         
         # Format:
         # A: ""
@@ -79,35 +80,38 @@ async def append_payment_to_sheet(date_str: str, student_name: str, amount: int,
             "",               # G
         ]
         
-        # Fetch all values to find the real last row with data
-        records = await worksheet.get_values()
+        # Fetch only columns C:E to find the real last row with data faster
+        records = await worksheet.get_values("C:E")
         
         last_row_with_data = 0
         for i, row in enumerate(records):
             # Check if there's any text in Date (C), Type (D), or Name (E)
-            has_data = False
-            for col_idx in [2, 3, 4]:
-                if col_idx < len(row) and str(row[col_idx]).strip():
-                    has_data = True
-                    break
-            if has_data:
+            if any(str(cell).strip() for cell in row):
                 last_row_with_data = i + 1
                 
         next_row = last_row_with_data + 1
         
-        # Update columns A through G
-        await worksheet.update(
-            values=[row_data_ag],
-            range_name=f"A{next_row}:G{next_row}",
-            value_input_option='USER_ENTERED'
-        )
-        
-        # Update column I separately to avoid touching formulas in column H
-        await worksheet.update(
-            values=[[cashless_income]],
-            range_name=f"I{next_row}:I{next_row}",
-            value_input_option='USER_ENTERED'
-        )
+        if cashless_income != "":
+            # Update columns A:G and column I concurrently without touching formulas in column H
+            await asyncio.gather(
+                worksheet.update(
+                    values=[row_data_ag],
+                    range_name=f"A{next_row}:G{next_row}",
+                    value_input_option='USER_ENTERED'
+                ),
+                worksheet.update(
+                    values=[[cashless_income]],
+                    range_name=f"I{next_row}:I{next_row}",
+                    value_input_option='USER_ENTERED'
+                )
+            )
+        else:
+            # Update columns A through G
+            await worksheet.update(
+                values=[row_data_ag],
+                range_name=f"A{next_row}:G{next_row}",
+                value_input_option='USER_ENTERED'
+            )
         return True, f"Success (row {next_row})"
     except gspread.exceptions.WorksheetNotFound:
         msg = f"Вкладка '{tab_name}' не найдена в таблице Google Sheets"

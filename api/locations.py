@@ -10,7 +10,7 @@ LOCATIONS = {
         "location_id": 5,
         "branch_id": 1,
         "rooms": {"lego": 33, "makeblock": 34},
-        "accounts": {"cash": 5, "terminal": 6, "card": 2},
+        "accounts": {"cash": 5, "terminal": 6},
         "sheets_tab": "Оплаты Манташяна",
     },
     "K": {
@@ -20,7 +20,7 @@ LOCATIONS = {
         "location_id": 1,
         "branch_id": 1,
         "rooms": {"lego": 30, "makeblock": 31},
-        "accounts": {"cash": 1, "terminal": 3, "card": 2},
+        "accounts": {"cash": 1, "terminal": 3},
         "sheets_tab": "Оплаты Комитаса",
     },
     "S": {
@@ -30,7 +30,7 @@ LOCATIONS = {
         "location_id": 2,
         "branch_id": 1,
         "rooms": {"lego": None, "makeblock": None},
-        "accounts": {"cash": 7, "terminal": 8, "card": 2},
+        "accounts": {"cash": 7, "terminal": 8},
         "sheets_tab": "Оплаты Кентрон",
     },
 }
