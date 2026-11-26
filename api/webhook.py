@@ -20,10 +20,7 @@ from api.i18n import t
 from api.tasks_widget import (
     is_tasks_widget_enabled,
     set_tasks_widget_enabled,
-    send_tasks_widget,
-    answer_widget_query,
-    edit_message_widget_data,
-    encode_active_chat_data,
+    render_tasks_card,
     _env_widget_override,
 )
 
@@ -1368,23 +1365,16 @@ async def cmd_kchecktasks(message: types.Message):
     await ensure_db()
     lang = await get_user_language(message.from_user.id)
     tasks = await get_tasks(location="K")
+
+    if await is_tasks_widget_enabled(await get_db_pool()):
+        loc_k = get_location("K") or {"code": "K", "name": "Комитас"}
+        text, markup = render_tasks_card(tasks, "K", loc_k["name"], lang)
+        await message.answer(text, parse_mode="HTML", reply_markup=markup)
+        return
+
     if not tasks:
         await message.answer(t("kchecktasks_empty", lang))
         return
-
-    loc_k = get_location("K") or {"code": "K", "name": "Комитас"}
-    if message.chat.type == "private" and await is_tasks_widget_enabled(await get_db_pool()):
-        sent = await send_tasks_widget(
-            API_TOKEN,
-            message.chat.id,
-            tasks,
-            "K",
-            loc_k["name"],
-            lang,
-            get_http_client(),
-        )
-        if sent:
-            return
 
     await _send_classic_tasks_list(message, tasks, "K", t("kchecktasks_header", lang))
 
@@ -1967,63 +1957,137 @@ async def _notify_task_done(user_info: str, task_id: int, task_desc: str, lang: 
                 print(f"Failed to send task completion notification to {u_id}: {e}")
 
 
-async def handle_tasks_widget_query(wq: dict):
-    """Handle Telegram Bot API 10.4+ WidgetQuery updates from the interactive /checktasks widget."""
-    wq_id = wq.get("id")
-    raw_data = (wq.get("data") or "").strip()
-    from_user = wq.get("from") or {}
-    user_id = from_user.get("id")
-    chat = wq.get("chat") or {}
-    chat_id = chat.get("id") or user_id
-    message_id = wq.get("message_id")
-    http_client = get_http_client()
+async def _edit_tasks_card(
+    callback: types.CallbackQuery,
+    loc_code: str,
+    lang: str,
+    page: int = 0,
+    done_count: int = 0,
+    initial_total=None,
+    last_done_id=None,
+):
+    tasks = await get_tasks(location=loc_code)
+    loc_name = (get_location(loc_code) or {}).get("name", loc_code)
+    text, markup = render_tasks_card(
+        tasks,
+        loc_code,
+        loc_name,
+        lang=lang,
+        page=page,
+        done_count=done_count,
+        initial_total=initial_total,
+        last_done_id=last_done_id,
+    )
+    try:
+        await callback.message.edit_text(text, parse_mode="HTML", reply_markup=markup)
+    except Exception as e:
+        if "message is not modified" not in str(e).lower():
+            print(f"_edit_tasks_card error: {e}")
 
-    parts = raw_data.split(":")
-    action = parts[0] if parts else ""
 
-    if action == "c" and len(parts) == 3:
-        cb_location = parts[1]
-        try:
-            task_id = int(parts[2])
-        except ValueError:
-            await answer_widget_query(API_TOKEN, wq_id, '{"ok":0}', http_client)
-            return
+@dp.callback_query(F.data == "tw_noop")
+async def callback_tw_noop(callback: types.CallbackQuery):
+    await callback.answer()
 
-        task_desc = await delete_task(task_id)
-        remaining_tasks = await get_tasks(location=cb_location)
-        active_ids = [row["id"] for row in remaining_tasks]
-        chat_data = encode_active_chat_data(active_ids)
 
-        # Respond immediately to the widget so UI updates without delay
-        await answer_widget_query(API_TOKEN, wq_id, chat_data, http_client)
-        if chat_id and message_id:
-            await edit_message_widget_data(API_TOKEN, chat_id, message_id, chat_data, http_client)
-
-        if task_desc:
-            username = from_user.get("username")
-            full_name = " ".join(filter(None, [from_user.get("first_name"), from_user.get("last_name")])) or str(user_id or "User")
-            user_info = f"@{username}" if username else full_name
-            lang = await get_user_language(user_id) if user_id else "hy"
-            await _notify_task_done(user_info, task_id, task_desc, lang)
+@dp.callback_query(F.data.startswith("tw_c:"))
+async def callback_tw_complete(callback: types.CallbackQuery):
+    await ensure_db()
+    lang = await get_user_language(callback.from_user.id)
+    parts = callback.data.split(":")
+    if len(parts) != 6:
+        await callback.answer()
         return
 
-    if action == "r" and len(parts) == 2:
-        cb_location = parts[1]
-        remaining_tasks = await get_tasks(location=cb_location)
-        active_ids = [row["id"] for row in remaining_tasks]
-        chat_data = encode_active_chat_data(active_ids)
-
-        await answer_widget_query(API_TOKEN, wq_id, chat_data, http_client)
-        if chat_id and message_id:
-            await edit_message_widget_data(API_TOKEN, chat_id, message_id, chat_data, http_client)
+    loc_code = parts[1]
+    try:
+        task_id = int(parts[2])
+        page = int(parts[3])
+        prev_done = int(parts[4])
+        total = int(parts[5])
+    except ValueError:
+        await callback.answer()
         return
 
-    await answer_widget_query(API_TOKEN, wq_id, '{"ok":0}', http_client)
+    task_desc = await delete_task(task_id)
+    if not task_desc:
+        await callback.answer(t("task_not_found_cb", lang), show_alert=True)
+        await _edit_tasks_card(callback, loc_code, lang, page=page, done_count=prev_done, initial_total=total)
+        return
+
+    new_done = prev_done + 1
+    await callback.answer(t("task_done_cb", lang, n=task_id))
+    await _edit_tasks_card(
+        callback,
+        loc_code,
+        lang,
+        page=page,
+        done_count=new_done,
+        initial_total=max(total, new_done),
+        last_done_id=task_id,
+    )
+
+    user_info = f"@{callback.from_user.username}" if callback.from_user.username else callback.from_user.full_name
+    await _notify_task_done(user_info, task_id, task_desc, lang)
+
+
+@dp.callback_query(F.data.startswith("tw_p:"))
+async def callback_tw_page(callback: types.CallbackQuery):
+    await ensure_db()
+    lang = await get_user_language(callback.from_user.id)
+    parts = callback.data.split(":")
+    if len(parts) != 5:
+        await callback.answer()
+        return
+    loc_code = parts[1]
+    try:
+        page = int(parts[2])
+        done_count = int(parts[3])
+        total = int(parts[4])
+    except ValueError:
+        await callback.answer()
+        return
+    await callback.answer()
+    await _edit_tasks_card(callback, loc_code, lang, page=page, done_count=done_count, initial_total=total)
+
+
+@dp.callback_query(F.data.startswith("tw_b:"))
+async def callback_tw_branch(callback: types.CallbackQuery):
+    await ensure_db()
+    lang = await get_user_language(callback.from_user.id)
+    parts = callback.data.split(":")
+    if len(parts) != 2:
+        await callback.answer()
+        return
+    loc_code = parts[1]
+    loc_name = (get_location(loc_code) or {}).get("name", loc_code)
+    await callback.answer(f"📍 {loc_name}")
+    await _edit_tasks_card(callback, loc_code, lang, page=0, done_count=0, initial_total=None)
+
+
+@dp.callback_query(F.data.startswith("tw_r:"))
+async def callback_tw_refresh(callback: types.CallbackQuery):
+    await ensure_db()
+    lang = await get_user_language(callback.from_user.id)
+    parts = callback.data.split(":")
+    if len(parts) != 5:
+        await callback.answer()
+        return
+    loc_code = parts[1]
+    try:
+        page = int(parts[2])
+        done_count = int(parts[3])
+        total = int(parts[4])
+    except ValueError:
+        await callback.answer()
+        return
+    await callback.answer("🔄 Թարմացված է" if lang == "hy" else "🔄 Обновлено")
+    await _edit_tasks_card(callback, loc_code, lang, page=page, done_count=done_count, initial_total=total)
 
 
 @dp.message(Command("taskswidget"))
 async def cmd_taskswidget(message: types.Message):
-    """Admin-only toggle for interactive HTML tasks widget (instant rollback to classic /checktasks)."""
+    """Admin-only toggle for interactive tasks card widget (instant rollback to classic /checktasks)."""
     await ensure_db()
     if message.from_user.id != ADMIN_ID:
         return
@@ -2035,7 +2099,7 @@ async def cmd_taskswidget(message: types.Message):
     if args in ("on", "1", "true", "enable"):
         await set_tasks_widget_enabled(pool, True)
         note = "\n⚠️ Внимание: в Vercel задана переменная `TASKS_WIDGET_ENABLED`, она имеет приоритет." if env_override is not None else ""
-        await message.answer(f"✅ Виджет задач для `/checktasks` **включён**.{note}", parse_mode="Markdown")
+        await message.answer(f"✅ Интерактивная карточка задач для `/checktasks` **включена**.{note}", parse_mode="Markdown")
         return
     if args in ("off", "0", "false", "disable", "rollback"):
         await set_tasks_widget_enabled(pool, False)
@@ -2044,7 +2108,7 @@ async def cmd_taskswidget(message: types.Message):
         return
 
     enabled = await is_tasks_widget_enabled(pool)
-    status_str = "🟢 **Включён** (интерактивный HTML-виджет)" if enabled else "🔴 **Отключён** (классический список + кнопки)"
+    status_str = "🟢 **Включён** (интерактивная карточка в чате)" if enabled else "🔴 **Отключён** (классический список + кнопки)"
     env_note = f"\n⚙️ Переопределено через `TASKS_WIDGET_ENABLED={os.getenv('TASKS_WIDGET_ENABLED')}`" if env_override is not None else ""
 
     builder = InlineKeyboardBuilder()
@@ -2070,7 +2134,7 @@ async def callback_taskswidget_toggle(callback: types.CallbackQuery):
     await callback.answer("✅ Включено" if enable else "↩️ Откачено на классический вид")
 
     env_override = _env_widget_override()
-    status_str = "🟢 **Включён** (интерактивный HTML-виджет)" if enable else "🔴 **Отключён** (классический список + кнопки)"
+    status_str = "🟢 **Включён** (интерактивная карточка в чате)" if enable else "🔴 **Отключён** (классический список + кнопки)"
     env_note = f"\n⚙️ Переопределено через `TASKS_WIDGET_ENABLED={os.getenv('TASKS_WIDGET_ENABLED')}`" if env_override is not None else ""
 
     builder = InlineKeyboardBuilder()
@@ -2097,22 +2161,15 @@ async def cmd_checktasks(message: types.Message):
 
     loc = await get_user_location(message.from_user.id)
     tasks = await get_tasks(location=loc["code"])
+
+    if await is_tasks_widget_enabled(await get_db_pool()):
+        text, markup = render_tasks_card(tasks, loc["code"], loc["name"], lang)
+        await message.answer(text, parse_mode="HTML", reply_markup=markup)
+        return
+
     if not tasks:
         await message.answer(t("task_empty", lang))
         return
-
-    if message.chat.type == "private" and await is_tasks_widget_enabled(await get_db_pool()):
-        sent = await send_tasks_widget(
-            API_TOKEN,
-            message.chat.id,
-            tasks,
-            loc["code"],
-            loc["name"],
-            lang,
-            get_http_client(),
-        )
-        if sent:
-            return
 
     await _send_classic_tasks_list(message, tasks, loc["code"], t("task_header", lang, loc=loc["name"]))
 
@@ -3443,20 +3500,10 @@ async def webhook(request: Request):
             if len(PROCESSED_UPDATES) > 2000:
                 PROCESSED_UPDATES.clear()
             PROCESSED_UPDATES.add(update_id)
+        update = types.Update(**update_data)
+        
         # Инициализируем базу данных и загружаем кэш
         await ensure_db()
-
-        # Обработка интерактивных HTML-виджетов (Telegram Bot API 10.4+ widget_query)
-        if "widget_query" in update_data:
-            wq = update_data["widget_query"] or {}
-            wq_user = (wq.get("from") or {}).get("id")
-            if wq_user and wq_user in BANNED_USERS:
-                print(f"Ignored widget_query from banned user {wq_user}")
-                return {"status": "ok"}
-            await asyncio.wait_for(handle_tasks_widget_query(wq), timeout=14.0)
-            return {"status": "ok"}
-
-        update = types.Update(**update_data)
         
         # Проверяем пользователя и сохраняем его, если он новый
         user_id = None
