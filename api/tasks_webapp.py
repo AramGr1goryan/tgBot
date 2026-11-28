@@ -501,7 +501,10 @@ TASKS_WEBAPP_HTML = r"""<!DOCTYPE html>
       <div class="loc-pill" id="locPill">📍 ...</div>
       <h1 class="title" id="pageTitle">Задачи</h1>
     </div>
-    <button class="icon-btn" id="refreshBtn" type="button" title="Refresh">↻</button>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <a class="icon-btn" id="toKassaLink" href="/webapp/kassa" style="width:auto;padding:0 11px;font-size:12px;font-weight:700;text-decoration:none;">💳 Касса</a>
+      <button class="icon-btn" id="refreshBtn" type="button" title="Refresh">↻</button>
+    </div>
   </div>
 
   <div class="prog-row">
@@ -738,6 +741,11 @@ async function loadTasks(showSpin = true) {
     state.locCode = data.location_code || state.locCode;
     state.locName = data.location_name || state.locCode;
     state.tasks = data.tasks || [];
+    const kLink = document.getElementById("toKassaLink");
+    if (kLink) {
+      kLink.href = `/webapp/kassa?loc=${encodeURIComponent(state.locCode)}`;
+      kLink.textContent = state.lang === "hy" ? "💳 Դրամարկղ" : "💳 Касса";
+    }
     if (state.sessionTotal === 0) state.sessionTotal = state.tasks.length;
     render();
   } catch (e) {

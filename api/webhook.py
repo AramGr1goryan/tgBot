@@ -31,6 +31,18 @@ from api.tasks_widget import (
     _env_widget_override,
 )
 from api.tasks_webapp import validate_telegram_init_data, TASKS_WEBAPP_HTML
+from api.kassa_widget import (
+    is_kassa_widget_enabled,
+    set_kassa_widget_enabled,
+    render_kassa_hub_card,
+    render_payment_receipt_card,
+    render_candidates_card,
+    render_confirm_prefix_card,
+    render_expense_card,
+    render_kassa_check_card,
+    _env_kassa_widget_override,
+)
+from api.kassa_webapp import KASSA_WEBAPP_HTML
 
 
 API_TOKEN = os.getenv("BOT_TOKEN")
@@ -43,7 +55,7 @@ ADMIN_ID = 1472817960
 TASK_NOTIFY_USERS = [1472817960, 6062763343, 5636022981]
 PUBLIC_BASE_URL = ""
 
-def get_tasks_webapp_url(loc_code: str) -> Optional[str]:
+def _get_public_base_url() -> Optional[str]:
     base = (os.getenv("WEBAPP_URL") or PUBLIC_BASE_URL or "").strip()
     if not base:
         vercel_host = (
@@ -55,7 +67,19 @@ def get_tasks_webapp_url(loc_code: str) -> Optional[str]:
             base = vercel_host if vercel_host.startswith("http") else f"https://{vercel_host}"
     if not base or not base.startswith("https://"):
         return None
-    return f"{base.rstrip('/')}/webapp/tasks?loc={loc_code}"
+    return base.rstrip("/")
+
+def get_tasks_webapp_url(loc_code: str) -> Optional[str]:
+    base = _get_public_base_url()
+    if not base:
+        return None
+    return f"{base}/webapp/tasks?loc={loc_code}"
+
+def get_kassa_webapp_url(loc_code: str, tab: str = "pay") -> Optional[str]:
+    base = _get_public_base_url()
+    if not base:
+        return None
+    return f"{base}/webapp/kassa?loc={loc_code}&tab={tab}"
 
 bot = Bot(token=API_TOKEN) if API_TOKEN else None
 dp = Dispatcher()
@@ -2988,15 +3012,43 @@ async def _execute_payment(message, customer_id, payer_name, customer_name, amou
             "pay_id": error_msg_or_id, 
             "amount": amount_int, 
             "name": customer_name,
+            "method_label": payment_method,
+            "executor_name": executor_name,
+            "loc_code": loc.get("code", "GN"),
+            "loc_name": loc.get("name", ""),
             "sheet_row": row_idx,
             "tab_name": loc.get("sheets_tab"),
             "dedup_key": dedup_key,
         }
-        
-        if processing_msg:
-            await processing_msg.edit_text(t("payment_success", lang, name=customer_name, text=response_text))
+
+        if await is_kassa_widget_enabled(await get_db_pool()):
+            webapp_url = get_kassa_webapp_url(loc.get("code", "GN")) if message.chat.type == "private" else None
+            card_text, card_markup = render_payment_receipt_card(
+                customer_name=customer_name,
+                amount=amount_int,
+                method_label=payment_method,
+                executor_name=executor_name,
+                loc_name=loc.get("name", ""),
+                lang=lang,
+                sheet_warning=("" if sheet_success else str(sheet_err)),
+                webapp_url=webapp_url,
+                undone=False,
+            )
+            sent_ok = False
+            if processing_msg:
+                sent_ok = await edit_card_message(API_TOKEN, message.chat.id, processing_msg.message_id, card_text, card_markup, get_http_client())
+            if not sent_ok:
+                sent_ok = await send_card_message(API_TOKEN, message.chat.id, card_text, card_markup, get_http_client())
+            if not sent_ok:
+                if processing_msg:
+                    await processing_msg.edit_text(t("payment_success", lang, name=customer_name, text=response_text))
+                else:
+                    await message.answer(t("payment_success", lang, name=customer_name, text=response_text))
         else:
-            await message.answer(t("payment_success", lang, name=customer_name, text=response_text))
+            if processing_msg:
+                await processing_msg.edit_text(t("payment_success", lang, name=customer_name, text=response_text))
+            else:
+                await message.answer(t("payment_success", lang, name=customer_name, text=response_text))
             
         if GROUP_CHAT_ID:
             try:
@@ -3015,26 +3067,20 @@ async def _execute_payment(message, customer_id, payer_name, customer_name, amou
             await message.answer(t("payment_error", lang, msg=error_msg_or_id))
 
 
-@dp.message(Command("undo"))
-async def cmd_undo(message: types.Message):
-    user_id = message.from_user.id
-    if user_id not in KNOWN_USERS and user_id != ADMIN_ID:
-        return
-        
-    lang = await get_user_language(user_id)
+async def _perform_undo_payment(user_id: int, fallback_full_name: str, lang: str):
+    """Shared undo logic for /undo, kw_undo inline button, and Mini App /api/webapp/kassa/undo."""
     if user_id not in LAST_PAYMENTS:
-        await message.answer("Нет платежа для отмены (или он уже был отменен)." if lang != 'hy' else "Չկա վճարում չեղարկելու համար (կամ արդեն չեղարկվել է):")
-        return
-        
+        msg = "Нет платежа для отмены (или он уже был отменен)." if lang != 'hy' else "Չկա վճարում չեղարկելու համար (կամ արդեն չեղարկվել է):"
+        return False, msg, None
+
     last_pay = LAST_PAYMENTS[user_id]
     pay_id = last_pay.get("pay_id")
     if not pay_id:
-        await message.answer("Ошибка: ID платежа не найден." if lang != 'hy' else "Սխալ՝ վճարման ID-ն չի գտնվել:")
-        return
-        
+        msg = "Ошибка: ID платежа не найден." if lang != 'hy' else "Սխալ՝ վճարման ID-ն չի գտնվել:"
+        return False, msg, None
+
     success, err = await delete_alfacrm_payment(pay_id)
-    
-    text = ""
+
     if success:
         text = f"✅ Платеж ({last_pay['amount']} AMD для {last_pay['name']}) успешно удален/обнулен из Alfa CRM."
         if lang == 'hy':
@@ -3043,7 +3089,7 @@ async def cmd_undo(message: types.Message):
         text = f"⚠️ Ошибка удаления из Alfa CRM (удалите ВРУЧНУЮ!): {err}"
         if lang == 'hy':
             text = f"⚠️ Alfa CRM-ից ջնջելու սխալ (ջնջեք ՁԵՌՔՈՎ): {err}"
-            
+
     sheet_row = last_pay.get("sheet_row")
     tab_name = last_pay.get("tab_name")
     if sheet_row:
@@ -3055,25 +3101,262 @@ async def cmd_undo(message: types.Message):
             text += f"\n⚠️ Ошибка обнуления в ДДС (нужно вручную): {sheet_msg}" if lang != 'hy' else f"\n⚠️ ԴԴՍ աղյուսակում զրոյացման սխալ (ջնջեք ձեռքով): {sheet_msg}"
     else:
         text += "\n⚠️ В Google-таблице (ДДС) платеж нужно удалить ВРУЧНУЮ!" if lang != 'hy' else "\n⚠️ ԴԴՍ Google-աղյուսակից վճարումը պետք է ջնջել ՁԵՌՔՈՎ:"
-        
-    await message.answer(text)
-    
-    if GROUP_CHAT_ID:
+
+    if GROUP_CHAT_ID and bot:
         try:
-            executor_name = EXECUTORS.get(user_id, message.from_user.full_name)
+            executor_name = EXECUTORS.get(user_id, fallback_full_name)
             chat_id_int = int(GROUP_CHAT_ID)
             thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
             group_msg = f"🗑 **Отмена платежа**\n{executor_name} отменил(а) платеж:\n{last_pay['name']} | {last_pay['amount']}"
-            await message.bot.send_message(
-                chat_id_int, 
+            await bot.send_message(
+                chat_id_int,
                 group_msg,
                 message_thread_id=thread_id_int
             )
         except Exception as e:
             print(f"Failed to send undo to group: {e}")
-            
+
     await _delete_recent_payment(dedup_key=last_pay.get("dedup_key"), pay_id=pay_id)
     del LAST_PAYMENTS[user_id]
+    return True, text, last_pay
+
+
+@dp.message(Command("undo"))
+async def cmd_undo(message: types.Message):
+    user_id = message.from_user.id
+    if user_id not in KNOWN_USERS and user_id != ADMIN_ID:
+        return
+    await ensure_db()
+    lang = await get_user_language(user_id)
+    _, text, _ = await _perform_undo_payment(user_id, message.from_user.full_name, lang)
+    await message.answer(text)
+
+
+@dp.callback_query(F.data == "kw_undo")
+async def callback_kw_undo(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    if user_id not in KNOWN_USERS and user_id != ADMIN_ID:
+        await callback.answer()
+        return
+    await ensure_db()
+    lang = await get_user_language(user_id)
+    ok, text, undone_pay = await _perform_undo_payment(user_id, callback.from_user.full_name, lang)
+    if not ok:
+        await callback.answer(text, show_alert=True)
+        return
+
+    await callback.answer("🗑 Չեղարկված է" if lang == "hy" else "🗑 Платёж отменён")
+    if undone_pay and callback.message:
+        loc_code = undone_pay.get("loc_code", "GN")
+        webapp_url = get_kassa_webapp_url(loc_code) if callback.message.chat.type == "private" else None
+        card_text, card_markup = render_payment_receipt_card(
+            customer_name=undone_pay.get("name", ""),
+            amount=undone_pay.get("amount", 0),
+            method_label=undone_pay.get("method_label", ""),
+            executor_name=undone_pay.get("executor_name", EXECUTORS.get(user_id, "")),
+            loc_name=undone_pay.get("loc_name", ""),
+            lang=lang,
+            webapp_url=webapp_url,
+            undone=True,
+        )
+        await edit_card_message(API_TOKEN, callback.message.chat.id, callback.message.message_id, card_text, card_markup, get_http_client())
+    if callback.message:
+        await callback.message.answer(text)
+
+
+@dp.callback_query(F.data == "kw_dds")
+async def callback_kw_dds(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    await ensure_db()
+    loc = await get_user_location(user_id)
+    lang = await get_user_language(user_id)
+    tab_name = loc.get("sheets_tab")
+    if not tab_name:
+        await callback.answer("Вкладка ДДС не настроена", show_alert=True)
+        return
+    success, val = await get_last_h_value(tab_name)
+    if not success:
+        await callback.answer(f"❌ {val}", show_alert=True)
+        return
+    msg = f"📊 {loc['name']} (ԴԴՍ): {val} AMD" if lang == "hy" else f"📊 {loc['name']} (по ДДС): {val} AMD"
+    await callback.answer(msg, show_alert=True)
+
+
+@dp.callback_query(F.data == "kw_cancel")
+async def callback_kw_cancel(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    await ensure_db()
+    lang = await get_user_language(user_id)
+    PENDING_PAYMENTS.pop(user_id, None)
+    await callback.answer("❌ Չեղարկված է" if lang == "hy" else "❌ Отменено")
+    if callback.message:
+        try:
+            await callback.message.edit_text("❌ Վճարումը չեղարկված է։" if lang == "hy" else "❌ Платёж отменён.")
+        except Exception:
+            pass
+
+
+@dp.callback_query(F.data.startswith("kw_sel:"))
+async def callback_kw_select_candidate(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    await ensure_db()
+    lang = await get_user_language(user_id)
+    loc = await get_user_location(user_id)
+
+    if user_id in PROCESSING_USERS:
+        await callback.answer()
+        return
+    pending = PENDING_PAYMENTS.get(user_id)
+    if not pending or pending.get("state") != "select_multiple":
+        await callback.answer("❌ Сессия устарела" if lang != "hy" else "❌ Սեսիան ավարտվել է", show_alert=True)
+        return
+
+    try:
+        idx = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        await callback.answer()
+        return
+
+    candidates = pending.get("candidates") or []
+    if not (0 <= idx < len(candidates)):
+        await callback.answer()
+        return
+
+    await callback.answer()
+    customer = candidates[idx]
+    customer_name = customer.get("name", "")
+    customer_id = customer.get("id")
+
+    is_valid_loc = False
+    if check_crm_prefix(customer_name, loc["crm_prefix"]):
+        is_valid_loc = True
+    else:
+        valid_rooms = [v for v in loc["rooms"].values() if v is not None]
+        is_valid_loc = await check_customer_rooms(customer_id, valid_rooms=valid_rooms)
+
+    if not is_valid_loc:
+        pending["state"] = "confirm_prefix"
+        pending["customer"] = customer
+        method_label = PAYMENT_METHODS.get(pending["method_raw"], pending["method_raw"])
+        card_text, card_markup = render_confirm_prefix_card(
+            customer_name=customer_name,
+            crm_prefix=loc["crm_prefix"],
+            amount=pending["amount"],
+            method_label=method_label,
+            lang=lang,
+        )
+        if callback.message:
+            ok = await edit_card_message(API_TOKEN, callback.message.chat.id, callback.message.message_id, card_text, card_markup, get_http_client())
+            if not ok:
+                await send_card_message(API_TOKEN, callback.message.chat.id, card_text, card_markup, get_http_client())
+        return
+
+    PENDING_PAYMENTS.pop(user_id, None)
+    PROCESSING_USERS.add(user_id)
+    try:
+        processing_msg = None
+        if callback.message:
+            try:
+                processing_msg = await callback.message.edit_text(t("payment_processing", lang))
+            except Exception:
+                processing_msg = await callback.message.answer(t("payment_processing", lang))
+        payer_name = customer.get("legal_name") or customer_name
+        await _execute_payment(
+            callback.message,
+            customer_id,
+            payer_name,
+            customer_name,
+            pending["amount"],
+            pending["method_raw"],
+            pending["response_text"],
+            loc,
+            lang,
+            processing_msg,
+        )
+    finally:
+        PROCESSING_USERS.discard(user_id)
+
+
+@dp.message(Command("kassa"))
+async def cmd_kassa(message: types.Message):
+    await ensure_db()
+    user_id = message.from_user.id
+    lang = await get_user_language(user_id)
+    if user_id not in EXECUTORS:
+        await message.answer(t("unreg_user", lang))
+        return
+    loc = await get_user_location(user_id)
+    executor_name = EXECUTORS.get(user_id, message.from_user.full_name)
+    last_pay = LAST_PAYMENTS.get(user_id)
+    webapp_url = get_kassa_webapp_url(loc["code"]) if message.chat.type == "private" else None
+    text, markup = render_kassa_hub_card(loc["name"], executor_name, lang=lang, last_payment=last_pay, webapp_url=webapp_url)
+    await send_card_message(API_TOKEN, message.chat.id, text, markup, get_http_client())
+
+
+@dp.message(Command("kassawidget"))
+async def cmd_kassawidget(message: types.Message):
+    """Admin-only toggle for interactive kassa/payments widget (instant rollback to classic flow)."""
+    await ensure_db()
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    args = message.text.replace("/kassawidget", "", 1).strip().lower()
+    pool = await get_db_pool()
+    env_override = _env_kassa_widget_override()
+
+    if args in ("on", "1", "true", "enable"):
+        await set_kassa_widget_enabled(pool, True)
+        note = "\n⚠️ Внимание: в Vercel задана переменная `KASSA_WIDGET_ENABLED`, она имеет приоритет." if env_override is not None else ""
+        await message.answer(f"✅ Интерактивный интерфейс кассы и платежей **включён**.{note}", parse_mode="Markdown")
+        return
+    if args in ("off", "0", "false", "disable", "rollback"):
+        await set_kassa_widget_enabled(pool, False)
+        note = "\n⚠️ Внимание: в Vercel задана переменная `KASSA_WIDGET_ENABLED`, она имеет приоритет." if env_override is not None else ""
+        await message.answer(f"↩️ Виджет кассы **отключён** — платежи, `/rc`, `/check` и `/undo` возвращены к классическому виду.{note}", parse_mode="Markdown")
+        return
+
+    enabled = await is_kassa_widget_enabled(pool)
+    status_str = "🟢 **Включён** (интерактивные карточки + Mini App)" if enabled else "🔴 **Отключён** (классический текстовый режим)"
+    env_note = f"\n⚙️ Переопределено через `KASSA_WIDGET_ENABLED={os.getenv('KASSA_WIDGET_ENABLED')}`" if env_override is not None else ""
+
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🟢 Включить виджет кассы", callback_data="kw_toggle_on")
+    builder.button(text="↩️ Откатить (классика)", callback_data="kw_toggle_off")
+    builder.adjust(2)
+    await message.answer(
+        f"💳 **Интерфейс Кассы и Платежей**\nСтатус: {status_str}{env_note}\n\nБыстрые команды: `/kassawidget on` / `/kassawidget off`",
+        parse_mode="Markdown",
+        reply_markup=builder.as_markup(),
+    )
+
+
+@dp.callback_query(F.data.in_({"kw_toggle_on", "kw_toggle_off"}))
+async def callback_kassawidget_toggle(callback: types.CallbackQuery):
+    await ensure_db()
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Нет доступа", show_alert=True)
+        return
+
+    enable = (callback.data == "kw_toggle_on")
+    await set_kassa_widget_enabled(await get_db_pool(), enable)
+    await callback.answer("✅ Включено" if enable else "↩️ Откачено на классический вид")
+
+    env_override = _env_kassa_widget_override()
+    status_str = "🟢 **Включён** (интерактивные карточки + Mini App)" if enable else "🔴 **Отключён** (классический текстовый режим)"
+    env_note = f"\n⚙️ Переопределено через `KASSA_WIDGET_ENABLED={os.getenv('KASSA_WIDGET_ENABLED')}`" if env_override is not None else ""
+
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🟢 Включить виджет кассы", callback_data="kw_toggle_on")
+    builder.button(text="↩️ Откатить (классика)", callback_data="kw_toggle_off")
+    builder.adjust(2)
+    try:
+        await callback.message.edit_text(
+            f"💳 **Интерфейс Кассы и Платежей**\nСтатус: {status_str}{env_note}\n\nБыстрые команды: `/kassawidget on` / `/kassawidget off`",
+            parse_mode="Markdown",
+            reply_markup=builder.as_markup(),
+        )
+    except Exception:
+        pass
 
 
 @dp.callback_query(F.data.startswith("confirm_prefix_"))
@@ -3247,43 +3530,57 @@ async def cmd_rc(message: types.Message):
         lang = await get_user_language(user_id)
         await message.answer(t("unreg_user", lang))
         return
-        
+
+    await ensure_db()
+    loc = await get_user_location(user_id)
+    lang = await get_user_language(user_id)
+    widget_on = await is_kassa_widget_enabled(await get_db_pool())
+
     parts = message.text.split(" ", 2)
     if len(parts) < 3:
+        if widget_on:
+            executor_name = EXECUTORS.get(user_id, message.from_user.full_name)
+            webapp_url = get_kassa_webapp_url(loc["code"], tab="rc") if message.chat.type == "private" else None
+            text, markup = render_kassa_hub_card(loc["name"], executor_name, lang=lang, last_payment=LAST_PAYMENTS.get(user_id), webapp_url=webapp_url)
+            await send_card_message(API_TOKEN, message.chat.id, text, markup, get_http_client())
+            return
         await message.answer("Формат: /rc [сумма] [причина]")
         return
-        
+
     try:
         amount = int(parts[1].replace(',', '').replace('.', '').replace(' ', ''))
     except ValueError:
         await message.answer("Неверный формат суммы. Укажите число.")
         return
-        
+
     reason = parts[2].strip()
-    
-    await ensure_db()
-    loc = await get_user_location(user_id)
-    lang = await get_user_language(user_id)
-    
+
     tab_name = loc.get("sheets_tab")
     if not tab_name:
         await message.answer("Вкладка ДДС для вашей локации не настроена.")
         return
-    
+
     processing_msg = await message.answer(f"⏳ Добавляю расход для {loc['name']}...")
-    
+
     import zoneinfo
     from datetime import datetime
     from api.sheets import append_expense_to_sheet
     tz = zoneinfo.ZoneInfo("Asia/Yerevan")
     date_str = datetime.now(tz).strftime("%d.%m.%Y")
-    
+
     success, err = await append_expense_to_sheet(date_str, reason, amount, tab_name=tab_name)
     if success:
-        await processing_msg.edit_text(f"✅ Расход успешно добавлен!\nСумма: {amount}\nПричина: {reason}\nФилиал: {loc['name']}")
+        executor_name = EXECUTORS.get(user_id, "Неизвестный")
+        if widget_on:
+            webapp_url = get_kassa_webapp_url(loc["code"], tab="rc") if message.chat.type == "private" else None
+            card_text, card_markup = render_expense_card(amount, reason, loc["name"], executor_name, lang=lang, webapp_url=webapp_url)
+            ok = await edit_card_message(API_TOKEN, message.chat.id, processing_msg.message_id, card_text, card_markup, get_http_client())
+            if not ok:
+                await processing_msg.edit_text(f"✅ Расход успешно добавлен!\nСумма: {amount}\nПричина: {reason}\nФилиал: {loc['name']}")
+        else:
+            await processing_msg.edit_text(f"✅ Расход успешно добавлен!\nСумма: {amount}\nПричина: {reason}\nФилиал: {loc['name']}")
         if GROUP_CHAT_ID:
             try:
-                executor_name = EXECUTORS.get(user_id, "Неизвестный")
                 chat_id_int = int(GROUP_CHAT_ID)
                 thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and str(TOPIC_THREAD_ID).strip() != "None" else None
                 group_msg = f"💸 <b>Новый расход</b>\nФилиал: {loc['name']}\nСумма: {amount}\nПричина: {reason}\nДобавил(а): {executor_name}"
@@ -3306,12 +3603,23 @@ async def cmd_check_kassa(message: types.Message):
         lang = await get_user_language(user_id)
         await message.answer(t("unreg_user", lang))
         return
-        
+
+    await ensure_db()
+    loc = await get_user_location(user_id)
+    lang = await get_user_language(user_id)
+    widget_on = await is_kassa_widget_enabled(await get_db_pool())
+
     parts = message.text.split()
     if len(parts) < 2:
+        if widget_on:
+            executor_name = EXECUTORS.get(user_id, message.from_user.full_name)
+            webapp_url = get_kassa_webapp_url(loc["code"], tab="check") if message.chat.type == "private" else None
+            text, markup = render_kassa_hub_card(loc["name"], executor_name, lang=lang, last_payment=LAST_PAYMENTS.get(user_id), webapp_url=webapp_url)
+            await send_card_message(API_TOKEN, message.chat.id, text, markup, get_http_client())
+            return
         await message.answer("Формат: /check [сумма]")
         return
-        
+
     try:
         summ = float(parts[1].replace(',', '.'))
         if summ.is_integer():
@@ -3319,32 +3627,28 @@ async def cmd_check_kassa(message: types.Message):
     except ValueError:
         await message.answer("Неверный формат суммы. Укажите число.")
         return
-        
-    await ensure_db()
-    loc = await get_user_location(user_id)
-    lang = await get_user_language(user_id)
-    
+
     tab_name = loc.get("sheets_tab")
     if not tab_name:
         await message.answer("Вкладка ДДС для вашей локации не настроена.")
         return
-    
+
     processing_msg = await message.answer(f"⏳ Проверяю кассу для {loc['name']}...")
-    
+
     success, val = await get_last_h_value(tab_name)
     if not success:
         await processing_msg.edit_text(f"❌ Ошибка при получении данных из таблицы: {val}")
         return
-        
+
     try:
         last_h = float(str(val).replace(" ", "").replace("\xa0", "").replace(",", "."))
         if last_h.is_integer():
             last_h = int(last_h)
     except ValueError:
         last_h = val
-        
+
     match = (summ == last_h)
-    
+
     response_text = f"По ДДС: {last_h}\nКасса факт: {summ}\n\n"
     diff_text = ""
     if match:
@@ -3356,8 +3660,15 @@ async def cmd_check_kassa(message: types.Message):
         except Exception:
             pass
         response_text += f"❌ Внимание! Суммы НЕ совпадают!{diff_text}"
-        
-    await processing_msg.edit_text(response_text)
+
+    if widget_on:
+        webapp_url = get_kassa_webapp_url(loc["code"], tab="check") if message.chat.type == "private" else None
+        card_text, card_markup = render_kassa_check_card(last_h, summ, match, diff_text, loc["name"], lang=lang, webapp_url=webapp_url)
+        ok = await edit_card_message(API_TOKEN, message.chat.id, processing_msg.message_id, card_text, card_markup, get_http_client())
+        if not ok:
+            await processing_msg.edit_text(response_text)
+    else:
+        await processing_msg.edit_text(response_text)
     
     # Отправка в группу
     executor_name = EXECUTORS[user_id]
@@ -3466,6 +3777,12 @@ async def process_payment(message: types.Message):
                             if not is_valid_loc:
                                 pending['state'] = 'confirm_prefix'
                                 pending['customer'] = customer
+                                if await is_kassa_widget_enabled(await get_db_pool()):
+                                    method_label = PAYMENT_METHODS.get(pending['method_raw'], pending['method_raw'])
+                                    card_text, card_markup = render_confirm_prefix_card(customer_name, loc["crm_prefix"], pending["amount"], method_label, lang=lang)
+                                    sent = await send_card_message(API_TOKEN, message.chat.id, card_text, card_markup, get_http_client())
+                                    if sent:
+                                        return
                                 ask_text = f"Ընտրված աշակերտը «{customer_name}» չունի «{loc['crm_prefix']}» պրեֆիքս: Սա՞ է ճիշտ աշակերտը: (Այո/Ոչ)" if lang=='hy' else f"Выбранный клиент «{customer_name}» не имеет префикса «{loc['crm_prefix']}». Это правильный клиент? (Да/Нет)"
                                 
                                 builder = InlineKeyboardBuilder()
@@ -3535,6 +3852,19 @@ async def process_payment(message: types.Message):
             
         if len(customers) > 1:
             await processing_msg.delete()
+            PENDING_PAYMENTS[user_id] = {
+                'amount': amount_int,
+                'method_raw': payment_method_raw,
+                'response_text': response_text,
+                'state': 'select_multiple',
+                'candidates': customers
+            }
+            if await is_kassa_widget_enabled(await get_db_pool()):
+                card_text, card_markup = render_candidates_card(customers, amount_int, payment_method, loc["name"], lang=lang)
+                sent = await send_card_message(API_TOKEN, message.chat.id, card_text, card_markup, get_http_client())
+                if sent:
+                    return
+
             def format_customer_row(index, c):
                 phones = c.get('phone', [])
                 phone_str = ""
@@ -3547,13 +3877,6 @@ async def process_payment(message: types.Message):
             list_str = "\n".join([format_customer_row(i, c) for i, c in enumerate(customers)])
             ask_text = f"Գտնվել են մի քանի աշակերտներ:\n{list_str}\n\nԸնտրեք համարը:" if lang=='hy' else f"Найдено несколько клиентов:\n{list_str}\n\nВыберите номер:"
             await message.answer(ask_text)
-            PENDING_PAYMENTS[user_id] = {
-                'amount': amount_int,
-                'method_raw': payment_method_raw,
-                'response_text': response_text,
-                'state': 'select_multiple',
-                'candidates': customers
-            }
             return
             
         customer = customers[0]
@@ -3569,6 +3892,19 @@ async def process_payment(message: types.Message):
             
         if not is_valid_loc:
             await processing_msg.delete()
+            PENDING_PAYMENTS[user_id] = {
+                'amount': amount_int,
+                'method_raw': payment_method_raw,
+                'response_text': response_text,
+                'state': 'confirm_prefix',
+                'customer': customer
+            }
+            if await is_kassa_widget_enabled(await get_db_pool()):
+                card_text, card_markup = render_confirm_prefix_card(customer_name, loc["crm_prefix"], amount_int, payment_method, lang=lang)
+                sent = await send_card_message(API_TOKEN, message.chat.id, card_text, card_markup, get_http_client())
+                if sent:
+                    return
+
             ask_text = f"Գտնվել է «{customer_name}» աշակերտը, բայց նա չունի «{loc['crm_prefix']}» պրեֆիքս: Սա՞ է ճիշտ աշակերտը: (Այո/Ոչ)" if lang=='hy' else f"Найден клиент «{customer_name}», но он не имеет префикса «{loc['crm_prefix']}». Это правильный клиент? (Да/Нет)"
             
             builder = InlineKeyboardBuilder()
@@ -3577,13 +3913,6 @@ async def process_payment(message: types.Message):
             builder.adjust(2)
             
             await message.answer(ask_text, reply_markup=builder.as_markup())
-            PENDING_PAYMENTS[user_id] = {
-                'amount': amount_int,
-                'method_raw': payment_method_raw,
-                'response_text': response_text,
-                'state': 'confirm_prefix',
-                'customer': customer
-            }
             return
             
         payer_name = customer.get("legal_name") or customer_name
@@ -3866,3 +4195,370 @@ async def api_webapp_update_priority(task_id: int, request: Request):
     ok = await update_task_priority(task_id, priority)
     rows = await get_tasks(location=loc["code"])
     return {"ok": ok, "tasks": _serialize_tasks(rows)}
+
+
+# ─────────────────────── Telegram Mini App: Kassa & Payments ───────────────────────
+
+@app.get("/webapp/kassa", response_class=HTMLResponse)
+async def webapp_kassa_page():
+    return HTMLResponse(KASSA_WEBAPP_HTML)
+
+
+@app.get("/api/webapp/kassa/state")
+async def api_webapp_kassa_state(request: Request):
+    await ensure_db()
+    user, err = await _auth_webapp_request(request)
+    if err:
+        return err
+    user_id = int(user["id"])
+    loc = await _resolve_webapp_location(user_id, request.query_params.get("loc"))
+    lang = await get_user_language(user_id)
+    is_reg = user_id in EXECUTORS
+    exec_name = EXECUTORS.get(user_id) or " ".join(filter(None, [user.get("first_name"), user.get("last_name")])) or str(user_id)
+    last_pay = LAST_PAYMENTS.get(user_id)
+    return {
+        "location_code": loc["code"],
+        "location_name": loc["name"],
+        "crm_prefix": loc["crm_prefix"],
+        "executor_name": exec_name,
+        "is_registered": is_reg,
+        "lang": lang,
+        "last_payment": (
+            {"pay_id": last_pay.get("pay_id"), "name": last_pay.get("name"), "amount": last_pay.get("amount")}
+            if last_pay and last_pay.get("pay_id")
+            else None
+        ),
+    }
+
+
+@app.get("/api/webapp/kassa/customers")
+async def api_webapp_kassa_customers(request: Request):
+    await ensure_db()
+    user, err = await _auth_webapp_request(request)
+    if err:
+        return err
+    user_id = int(user["id"])
+    q = (request.query_params.get("q") or "").strip()
+    if len(q) < 2 and not q.isdigit():
+        return {"customers": []}
+
+    loc = await _resolve_webapp_location(user_id, request.query_params.get("loc"))
+    crm_prefix = loc["crm_prefix"]
+
+    cid = extract_customer_id(q) if (q.isdigit() or is_url_or_link(q)) else None
+    raw_list = []
+    if cid is not None:
+        c_obj = await get_alfacrm_customer_by_id(cid)
+        if c_obj:
+            raw_list = [c_obj]
+    if not raw_list:
+        raw_list = await get_alfacrm_customers_by_name(q)
+
+    results = []
+    for c in raw_list[:15]:
+        c_name = c.get("name") or ""
+        phones = c.get("phone", [])
+        if phones and isinstance(phones, list):
+            p_str = ", ".join(str(p) for p in phones)
+        elif phones:
+            p_str = str(phones)
+        else:
+            p_str = ""
+        results.append({
+            "id": int(c.get("id")),
+            "name": c_name,
+            "legal_name": c.get("legal_name") or c_name,
+            "phones": p_str,
+            "has_prefix": check_crm_prefix(c_name, crm_prefix),
+        })
+
+    # Sort candidates that already have this branch's prefix first
+    results.sort(key=lambda item: (0 if item["has_prefix"] else 1, item["name"]))
+    return {"customers": results}
+
+
+@app.get("/api/webapp/kassa/dds")
+async def api_webapp_kassa_dds(request: Request):
+    await ensure_db()
+    user, err = await _auth_webapp_request(request)
+    if err:
+        return err
+    user_id = int(user["id"])
+    loc = await _resolve_webapp_location(user_id, request.query_params.get("loc"))
+    tab_name = loc.get("sheets_tab")
+    if not tab_name:
+        return JSONResponse({"detail": "Вкладка ДДС не настроена"}, status_code=400)
+    ok, val = await get_last_h_value(tab_name)
+    if not ok:
+        return JSONResponse({"detail": str(val)}, status_code=500)
+    return {"ok": True, "dds_balance": val}
+
+
+@app.post("/api/webapp/kassa/pay")
+async def api_webapp_kassa_pay(request: Request):
+    await ensure_db()
+    user, err = await _auth_webapp_request(request)
+    if err:
+        return err
+    user_id = int(user["id"])
+    if user_id not in EXECUTORS:
+        return JSONResponse({"detail": "Сначала зарегистрируйте имя в боте командой /start"}, status_code=403)
+    if user_id in PROCESSING_USERS:
+        return JSONResponse({"detail": "Предыдущий платёж ещё обрабатывается, подождите пару секунд"}, status_code=429)
+
+    body = await request.json()
+    try:
+        customer_id = int(body.get("customer_id"))
+        amount_int = int(body.get("amount"))
+    except (TypeError, ValueError):
+        return JSONResponse({"detail": "Неверные параметры ученика или суммы"}, status_code=400)
+
+    method_raw = str(body.get("method") or "n").strip().lower()
+    if method_raw not in PAYMENT_METHODS or amount_int <= 0:
+        return JSONResponse({"detail": "Неверная сумма или способ оплаты"}, status_code=400)
+
+    loc = await _resolve_webapp_location(user_id, body.get("location"))
+    lang = await get_user_language(user_id)
+    executor_name = EXECUTORS[user_id]
+    method_label = PAYMENT_METHODS[method_raw]
+
+    PROCESSING_USERS.add(user_id)
+    try:
+        customer = await get_alfacrm_customer_by_id(customer_id)
+        if not customer:
+            return JSONResponse({"detail": "Ученик не найден в Alfa CRM"}, status_code=404)
+
+        customer_name = customer.get("name") or ""
+        if body.get("apply_prefix") and not check_crm_prefix(customer_name, loc["crm_prefix"]):
+            customer_name = apply_crm_prefix(customer_name, loc["crm_prefix"])
+            await update_alfacrm_customer_name(customer_id, customer_name)
+
+        payer_name = customer.get("legal_name") or customer_name
+        response_text = f"Платеж обработал(а): {executor_name}\n{customer_name} | {amount_int} | {method_label}"
+        dedup_key = f"{customer_id}:{amount_int}:{method_raw}"
+
+        existing = await _get_recent_payment(dedup_key)
+        if existing and existing.get("status") in ("processing", "completed"):
+            return JSONResponse({"detail": "Этот платёж уже был только что проведён (защита от дубля)"}, status_code=409)
+
+        await _save_recent_payment(dedup_key, customer_id, amount_int, method_raw, "processing", response_text=response_text)
+        success, error_msg_or_id = await asyncio.shield(
+            create_alfacrm_payment(customer_id, amount_int, method_raw, payer_name, location_config=loc)
+        )
+        if not success:
+            await _delete_recent_payment(dedup_key=dedup_key)
+            return JSONResponse({"detail": f"Ошибка Alfa CRM: {error_msg_or_id}"}, status_code=502)
+
+        tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+        date_str = datetime.now(tz).strftime("%d.%m.%Y")
+        sheet_success, sheet_err = await asyncio.shield(
+            append_payment_to_sheet(date_str, customer_name, amount_int, method_raw, tab_name=loc.get("sheets_tab"))
+        )
+
+        row_idx = None
+        if sheet_success:
+            row_match = re.search(r"row (\d+)", str(sheet_err))
+            if row_match:
+                row_idx = int(row_match.group(1))
+        else:
+            response_text += f"\n\n⚠️ Внимание: В Alfa CRM записано, но в ДДС ошибка: {sheet_err}"
+
+        await _save_recent_payment(
+            dedup_key, customer_id, amount_int, method_raw, "completed",
+            pay_id=str(error_msg_or_id), sheet_row=row_idx, tab_name=loc.get("sheets_tab"), response_text=response_text
+        )
+
+        last_pay_obj = {
+            "pay_id": str(error_msg_or_id),
+            "amount": amount_int,
+            "name": customer_name,
+            "method_label": method_label,
+            "executor_name": executor_name,
+            "loc_code": loc["code"],
+            "loc_name": loc["name"],
+            "sheet_row": row_idx,
+            "tab_name": loc.get("sheets_tab"),
+            "dedup_key": dedup_key,
+        }
+        LAST_PAYMENTS[user_id] = last_pay_obj
+
+        # Send receipt card to user's private chat & notify group
+        try:
+            webapp_url = get_kassa_webapp_url(loc["code"])
+            card_text, card_markup = render_payment_receipt_card(
+                customer_name=customer_name,
+                amount=amount_int,
+                method_label=method_label,
+                executor_name=executor_name,
+                loc_name=loc["name"],
+                lang=lang,
+                sheet_warning=("" if sheet_success else str(sheet_err)),
+                webapp_url=webapp_url,
+            )
+            await send_card_message(API_TOKEN, user_id, card_text, card_markup, get_http_client())
+        except Exception as e:
+            print(f"api_webapp_kassa_pay private receipt error: {e}")
+
+        if GROUP_CHAT_ID and bot:
+            try:
+                chat_id_int = int(GROUP_CHAT_ID)
+                thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+                await bot.send_message(chat_id_int, response_text, message_thread_id=thread_id_int)
+            except Exception as e:
+                print(f"api_webapp_kassa_pay group notify error: {e}")
+
+        return {
+            "ok": True,
+            "customer_name": customer_name,
+            "amount": amount_int,
+            "method_label": method_label,
+            "sheet_ok": sheet_success,
+            "last_payment": {"pay_id": str(error_msg_or_id), "name": customer_name, "amount": amount_int},
+        }
+    finally:
+        PROCESSING_USERS.discard(user_id)
+
+
+@app.post("/api/webapp/kassa/undo")
+async def api_webapp_kassa_undo(request: Request):
+    await ensure_db()
+    user, err = await _auth_webapp_request(request)
+    if err:
+        return err
+    user_id = int(user["id"])
+    lang = await get_user_language(user_id)
+    full_name = " ".join(filter(None, [user.get("first_name"), user.get("last_name")])) or str(user_id)
+    ok, text, _ = await _perform_undo_payment(user_id, full_name, lang)
+    if not ok:
+        return JSONResponse({"detail": text}, status_code=400)
+    try:
+        if bot:
+            await bot.send_message(user_id, text)
+    except Exception:
+        pass
+    return {"ok": True, "message": text}
+
+
+@app.post("/api/webapp/kassa/expense")
+async def api_webapp_kassa_expense(request: Request):
+    await ensure_db()
+    user, err = await _auth_webapp_request(request)
+    if err:
+        return err
+    user_id = int(user["id"])
+    if user_id not in EXECUTORS:
+        return JSONResponse({"detail": "Сначала зарегистрируйте имя в боте командой /start"}, status_code=403)
+
+    body = await request.json()
+    try:
+        amount = int(body.get("amount"))
+    except (TypeError, ValueError):
+        return JSONResponse({"detail": "Неверная сумма"}, status_code=400)
+    reason = str(body.get("reason") or "").strip()
+    if amount <= 0 or not reason:
+        return JSONResponse({"detail": "Укажите сумму и причину расхода"}, status_code=400)
+
+    loc = await _resolve_webapp_location(user_id, body.get("location"))
+    lang = await get_user_language(user_id)
+    tab_name = loc.get("sheets_tab")
+    if not tab_name:
+        return JSONResponse({"detail": "Вкладка ДДС не настроена"}, status_code=400)
+
+    from api.sheets import append_expense_to_sheet
+    tz = zoneinfo.ZoneInfo("Asia/Yerevan")
+    date_str = datetime.now(tz).strftime("%d.%m.%Y")
+    success, sheet_err = await append_expense_to_sheet(date_str, reason, amount, tab_name=tab_name)
+    if not success:
+        return JSONResponse({"detail": f"Ошибка ДДС: {sheet_err}"}, status_code=502)
+
+    executor_name = EXECUTORS.get(user_id, "Неизвестный")
+    try:
+        webapp_url = get_kassa_webapp_url(loc["code"], tab="rc")
+        card_text, card_markup = render_expense_card(amount, reason, loc["name"], executor_name, lang=lang, webapp_url=webapp_url)
+        await send_card_message(API_TOKEN, user_id, card_text, card_markup, get_http_client())
+    except Exception as e:
+        print(f"api_webapp_kassa_expense private card error: {e}")
+
+    if GROUP_CHAT_ID and bot:
+        try:
+            chat_id_int = int(GROUP_CHAT_ID)
+            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and str(TOPIC_THREAD_ID).strip() != "None" else None
+            group_msg = f"💸 <b>Новый расход</b>\nФилиал: {loc['name']}\nСумма: {amount}\nПричина: {reason}\nДобавил(а): {executor_name}"
+            await bot.send_message(chat_id_int, group_msg, message_thread_id=thread_id_int, parse_mode="HTML")
+        except Exception as e:
+            print(f"api_webapp_kassa_expense group error: {e}")
+
+    return {"ok": True, "amount": amount, "reason": reason}
+
+
+@app.post("/api/webapp/kassa/check")
+async def api_webapp_kassa_check(request: Request):
+    await ensure_db()
+    user, err = await _auth_webapp_request(request)
+    if err:
+        return err
+    user_id = int(user["id"])
+    if user_id not in EXECUTORS:
+        return JSONResponse({"detail": "Сначала зарегистрируйте имя в боте командой /start"}, status_code=403)
+
+    body = await request.json()
+    try:
+        summ = float(body.get("amount"))
+        if summ.is_integer():
+            summ = int(summ)
+    except (TypeError, ValueError):
+        return JSONResponse({"detail": "Неверный формат суммы"}, status_code=400)
+
+    loc = await _resolve_webapp_location(user_id, body.get("location"))
+    lang = await get_user_language(user_id)
+    tab_name = loc.get("sheets_tab")
+    if not tab_name:
+        return JSONResponse({"detail": "Вкладка ДДС не настроена"}, status_code=400)
+
+    success, val = await get_last_h_value(tab_name)
+    if not success:
+        return JSONResponse({"detail": f"Ошибка ДДС: {val}"}, status_code=502)
+
+    try:
+        last_h = float(str(val).replace(" ", "").replace("\xa0", "").replace(",", "."))
+        if last_h.is_integer():
+            last_h = int(last_h)
+    except ValueError:
+        last_h = val
+
+    match = (summ == last_h)
+    diff_text = ""
+    diff_str = "0"
+    if not match:
+        try:
+            diff = summ - last_h
+            diff_str = f"{diff:+g}"
+            diff_text = f" (разница: {diff:g})"
+        except Exception:
+            pass
+
+    try:
+        webapp_url = get_kassa_webapp_url(loc["code"], tab="check")
+        card_text, card_markup = render_kassa_check_card(last_h, summ, match, diff_text, loc["name"], lang=lang, webapp_url=webapp_url)
+        await send_card_message(API_TOKEN, user_id, card_text, card_markup, get_http_client())
+    except Exception as e:
+        print(f"api_webapp_kassa_check private card error: {e}")
+
+    executor_name = EXECUTORS[user_id]
+    group_status = "✅ Совпадает" if match else f"❌ Расхождение!{diff_text}"
+    group_msg = f"👤 {executor_name} проверял(а) кассу ({loc['crm_prefix']}):\nСумма по ДДС: {last_h}\nФакт: {summ}\n{group_status}"
+    if GROUP_CHAT_ID and bot:
+        try:
+            chat_id_int = int(GROUP_CHAT_ID)
+            thread_id_int = int(TOPIC_THREAD_ID) if TOPIC_THREAD_ID and TOPIC_THREAD_ID.strip() != "None" else None
+            await bot.send_message(chat_id_int, group_msg, message_thread_id=thread_id_int)
+        except Exception as e:
+            print(f"api_webapp_kassa_check group error: {e}")
+
+    return {
+        "ok": True,
+        "dds_balance": last_h,
+        "actual_amount": summ,
+        "match": match,
+        "diff_str": diff_str,
+    }
